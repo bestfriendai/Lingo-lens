@@ -434,71 +434,67 @@ struct ARTranslationView: View {
     /// Sets up observer for device orientation changes
     /// Adjusts detection box when orientation changes
     private func setupOrientationObserver() {
+        // Remove any existing observer first (defensive)
+        if let token = orientationObserver {
+            NotificationCenter.default.removeObserver(token)
+            orientationObserver = nil
+        }
+
+        // Capture needed values to avoid retaining self strongly
+        let viewModel = arViewModel
+
         // Store the observer token for proper cleanup
         orientationObserver = NotificationCenter.default.addObserver(
             forName: UIDevice.orientationDidChangeNotification,
             object: nil,
             queue: .main
-        ) { _ in
+        ) { [weak viewModel] _ in
+            guard let viewModel = viewModel else { return }
+
             let newOrientation = UIDevice.current.orientation
-            if newOrientation.isValidInterfaceOrientation && newOrientation != self.currentOrientation {
-                self.currentOrientation = newOrientation
+            guard newOrientation.isValidInterfaceOrientation else { return }
 
-                if let sceneView = self.arViewModel.sceneView {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        let oldContainerSize = self.previousSize
-                        let newContainerSize = sceneView.bounds.size
+            if let sceneView = viewModel.sceneView {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    let newContainerSize = sceneView.bounds.size
+                    let margin: CGFloat = 16
+                    let oldROI = viewModel.adjustableROI
 
-                        // Only adjust if size changed significantly
-                        guard abs(oldContainerSize.width - newContainerSize.width) > 1 ||
-                              abs(oldContainerSize.height - newContainerSize.height) > 1 else {
-                            return
-                        }
+                    let maxWidth = newContainerSize.width - 2 * margin
+                    let maxHeight = newContainerSize.height - 2 * margin
 
-                        let margin: CGFloat = 16
+                    // Preserve ROI aspect ratio
+                    let aspect = max(oldROI.width, 1) / max(oldROI.height, 1)
 
-                        // Calculate relative position to maintain proportional placement
-                        let currentROI = self.arViewModel.adjustableROI
-                        let relativeX = (currentROI.midX - margin) / (oldContainerSize.width - 2 * margin)
-                        let relativeY = (currentROI.midY - margin) / (oldContainerSize.height - 2 * margin)
-
-                        let maxWidth = newContainerSize.width - (2 * margin)
-                        let maxHeight = newContainerSize.height - (2 * margin)
-
-                        // Calculate new size while preserving ROI aspect ratio
-                        let aspect = currentROI.width / max(currentROI.height, 0.001)
-                        var newWidth = maxWidth
-                        var newHeight = maxWidth / aspect
-
-                        if newHeight > maxHeight {
-                            newHeight = maxHeight
-                            newWidth = maxHeight * aspect
-                        }
-
-                        // Clamp to container bounds
-                        newWidth = min(newWidth, maxWidth)
-                        newHeight = min(newHeight, maxHeight)
-
-                        // Calculate new position based on relative coordinates
-                        let newMidX = margin + (relativeX * (newContainerSize.width - 2 * margin))
-                        let newMidY = margin + (relativeY * (newContainerSize.height - 2 * margin))
-
-                        let newOriginX = newMidX - (newWidth / 2)
-                        let newOriginY = newMidY - (newHeight / 2)
-
-                        var newROI = CGRect(
-                            x: newOriginX,
-                            y: newOriginY,
-                            width: newWidth,
-                            height: newHeight
-                        )
-
-                        // Ensure box stays within screen margins
-                        newROI = self.enforceMarginConstraints(newROI, in: newContainerSize)
-
-                        self.arViewModel.adjustableROI = newROI
-                        self.previousSize = newContainerSize
+                    // Fit width/height preserving aspect
+                    var newWidth = min(oldROI.width, maxWidth)
+                    var newHeight = newWidth / aspect
+                    if newHeight > maxHeight {
+                        newHeight = maxHeight
+                        newWidth = newHeight * aspect
                     }
+
+                    // Calculate new center position (centered in container)
+                    let newMidX = newContainerSize.width / 2
+                    let newMidY = newContainerSize.height / 2
+
+                    var newROI = CGRect(
+                        x: newMidX - newWidth / 2,
+                        y: newMidY - newHeight / 2,
+                        width: newWidth,
+                        height: newHeight
+                    )
+
+                    // Ensure box stays within screen margins
+                    let minX = margin
+                    let minY = margin
+                    let maxX = newContainerSize.width - margin - newROI.width
+                    let maxY = newContainerSize.height - margin - newROI.height
+
+                    newROI.origin.x = max(minX, min(newROI.origin.x, maxX))
+                    newROI.origin.y = max(minY, min(newROI.origin.y, maxY))
+
+                    viewModel.adjustableROI = newROI
                 }
             }
         }
