@@ -187,7 +187,7 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            guard let arViewModel = self.arViewModel else { return }
+            guard self.arViewModel != nil else { return }
 
             // Small delay to avoid alert showing too quickly during normal transitions
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -213,7 +213,17 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     private func processFrameData(pixelBuffer: CVPixelBuffer,
                                  exifOrientation: CGImagePropertyOrientation,
                                  normalizedROI: CGRect) {
-        
+
+        // Safety timeout to prevent stuck detection state
+        let detectionStartTime = Date()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self = self else { return }
+            if self.isProcessingFrame && Date().timeIntervalSince(detectionStartTime) >= 1.0 {
+                SecureLogger.logError("Detection timeout - resetting isProcessingFrame")
+                self.isProcessingFrame = false
+            }
+        }
+
         // Send the cropped region to object detection manager
         objectDetectionManager.detectObjectCropped(
             pixelBuffer: pixelBuffer,

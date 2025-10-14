@@ -46,6 +46,9 @@ struct ARTranslationView: View {
     // For handling device orientation changes
     @State private var currentOrientation = UIDevice.current.orientation
 
+    // NotificationCenter observer token for proper cleanup
+    @State private var orientationObserver: NSObjectProtocol?
+
     // To show rating alert on 3rd launch
     // if instructions sheet needs to be presented
     // then we set it to false so that the instructions
@@ -211,14 +214,17 @@ struct ARTranslationView: View {
             isViewActive = false
             arViewModel.pauseARSession()
             arViewModel.resetAnnotations()
-            
+
             // Show reset warning unless disabled
             if !neverShowAlertAboutReset {
                 showAlertAboutReset = true
             }
-            
-            // Remove orientation observer
-            NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
+
+            // Remove orientation observer properly
+            if let observer = orientationObserver {
+                NotificationCenter.default.removeObserver(observer)
+                orientationObserver = nil
+            }
         }
     }
     
@@ -428,18 +434,19 @@ struct ARTranslationView: View {
     /// Sets up observer for device orientation changes
     /// Adjusts detection box when orientation changes
     private func setupOrientationObserver() {
-        NotificationCenter.default.addObserver(
+        // Store the observer token for proper cleanup
+        orientationObserver = NotificationCenter.default.addObserver(
             forName: UIDevice.orientationDidChangeNotification,
             object: nil,
             queue: .main
-        ) { [self] _ in
+        ) { _ in
             let newOrientation = UIDevice.current.orientation
-            if newOrientation.isValidInterfaceOrientation && newOrientation != currentOrientation {
-                currentOrientation = newOrientation
-                
-                if let sceneView = arViewModel.sceneView {
+            if newOrientation.isValidInterfaceOrientation && newOrientation != self.currentOrientation {
+                self.currentOrientation = newOrientation
+
+                if let sceneView = self.arViewModel.sceneView {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        let oldContainerSize = previousSize
+                        let oldContainerSize = self.previousSize
                         let newContainerSize = sceneView.bounds.size
 
                         // Only adjust if size changed significantly
@@ -451,22 +458,31 @@ struct ARTranslationView: View {
                         let margin: CGFloat = 16
 
                         // Calculate relative position to maintain proportional placement
-                        let currentROI = arViewModel.adjustableROI
+                        let currentROI = self.arViewModel.adjustableROI
                         let relativeX = (currentROI.midX - margin) / (oldContainerSize.width - 2 * margin)
                         let relativeY = (currentROI.midY - margin) / (oldContainerSize.height - 2 * margin)
 
                         let maxWidth = newContainerSize.width - (2 * margin)
                         let maxHeight = newContainerSize.height - (2 * margin)
-                        
-                        // Calculate new size while maintaining aspect ratio
-                        let scaleRatio = min(maxWidth / maxHeight, 1.0)
-                        let newWidth = min(currentROI.width * scaleRatio, maxWidth)
-                        let newHeight = min(currentROI.height * scaleRatio, maxHeight)
+
+                        // Calculate new size while preserving ROI aspect ratio
+                        let aspect = currentROI.width / max(currentROI.height, 0.001)
+                        var newWidth = maxWidth
+                        var newHeight = maxWidth / aspect
+
+                        if newHeight > maxHeight {
+                            newHeight = maxHeight
+                            newWidth = maxHeight * aspect
+                        }
+
+                        // Clamp to container bounds
+                        newWidth = min(newWidth, maxWidth)
+                        newHeight = min(newHeight, maxHeight)
 
                         // Calculate new position based on relative coordinates
                         let newMidX = margin + (relativeX * (newContainerSize.width - 2 * margin))
                         let newMidY = margin + (relativeY * (newContainerSize.height - 2 * margin))
-                        
+
                         let newOriginX = newMidX - (newWidth / 2)
                         let newOriginY = newMidY - (newHeight / 2)
 
@@ -478,10 +494,10 @@ struct ARTranslationView: View {
                         )
 
                         // Ensure box stays within screen margins
-                        newROI = enforceMarginConstraints(newROI, in: newContainerSize)
-                        
-                        arViewModel.adjustableROI = newROI
-                        previousSize = newContainerSize
+                        newROI = self.enforceMarginConstraints(newROI, in: newContainerSize)
+
+                        self.arViewModel.adjustableROI = newROI
+                        self.previousSize = newContainerSize
                     }
                 }
             }

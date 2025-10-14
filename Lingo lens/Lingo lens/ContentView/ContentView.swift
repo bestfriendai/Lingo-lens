@@ -79,6 +79,17 @@ struct ContentView: View {
         }
         
         .onChange(of: selectedTab) { oldValue, newValue in
+            // Pause AR session when leaving AR tab for instant Chat performance
+            if oldValue == .arTranslationView && newValue != .arTranslationView {
+                arViewModel.pauseARSession()
+            }
+
+            // Resume AR session when returning to AR tab
+            if newValue == .arTranslationView && oldValue != .arTranslationView {
+                arViewModel.resumeARSession()
+            }
+
+            // Audio session management
             if newValue == .arTranslationView || newValue == .savedWordsView || newValue == .chatTranslatorView {
                 Task {
                     SpeechManager.shared.prepareAudioSession()

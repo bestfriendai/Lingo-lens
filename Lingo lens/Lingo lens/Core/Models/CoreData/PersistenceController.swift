@@ -79,35 +79,42 @@ struct PersistenceController {
         
         // Directory path
         let storeDirectory = NSPersistentContainer.defaultDirectoryURL()
-        
-        // Log the store directory path
-        print("📂 Core Data store directory: \(storeDirectory.path)")
-        
+
+        #if DEBUG
+        // Log the store directory path (debug only)
+        SecureLogger.log("Core Data store directory: \(storeDirectory.path)", level: .debug)
+        #endif
+
         // For previews, use an in-memory store that disappears when the app closes
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
-            print("📂 Using in-memory Core Data store at: /dev/null")
+            #if DEBUG
+            SecureLogger.log("Using in-memory Core Data store at: /dev/null", level: .debug)
+            #endif
         } else {
             // Enable file protection for persistent store
             if let storeDescription = container.persistentStoreDescriptions.first {
-                // Enable complete file protection (encrypted when device is locked)
+                // Enable file protection until first user authentication
+                // More reliable than .complete for cold launches on locked devices
                 storeDescription.setOption(
-                    FileProtectionType.complete as NSObject,
+                    FileProtectionType.completeUntilFirstUserAuthentication as NSObject,
                     forKey: NSPersistentStoreFileProtectionKey
                 )
-                print("🔒 Core Data file protection enabled")
 
+                #if DEBUG
+                SecureLogger.log("Core Data file protection enabled", level: .debug)
                 if let storeURL = storeDescription.url {
-                    print("📂 Core Data store file: \(storeURL.path)")
+                    SecureLogger.log("Core Data store file: \(storeURL.path)", level: .debug)
                 }
+                #endif
             }
         }
         
         // Load the database
         container.loadPersistentStores { description, error in
             if let error = error as NSError? {
-                print("❌ CoreData store failed to load: \(error), \(error.userInfo)")
-                
+                SecureLogger.logError("CoreData store failed to load: \(error.localizedDescription)")
+
                 // Notify the app about database loading errors
                 NotificationCenter.default.post(
                     name: NSNotification.Name("CoreDataStoreFailedToLoad"),
@@ -115,7 +122,7 @@ struct PersistenceController {
                     userInfo: ["error": error]
                 )
             } else {
-                print("✅ Successfully loaded Core Data store")
+                SecureLogger.log("Successfully loaded Core Data store", level: .info)
             }
         }
         
