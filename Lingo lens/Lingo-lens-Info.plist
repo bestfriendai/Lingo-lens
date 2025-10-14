@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Lingo Lens needs access to your microphone to convert your speech into text for translation.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Lingo Lens uses speech recognition to convert your spoken words into text for translation.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Lingo Lens needs camera access to detect and translate objects in the real world using augmented reality.</string>
+</dict>
+</plist>
