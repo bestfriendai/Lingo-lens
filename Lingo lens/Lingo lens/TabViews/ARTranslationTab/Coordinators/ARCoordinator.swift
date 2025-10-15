@@ -344,6 +344,7 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         // Store the word to be translated for the view to handle via translationTask
         DispatchQueue.main.async {
             arViewModel.detectedObjectName = word
+            arViewModel.wordToTranslate = word
         }
     }
 

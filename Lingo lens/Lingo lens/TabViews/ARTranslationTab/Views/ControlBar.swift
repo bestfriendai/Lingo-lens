@@ -33,7 +33,7 @@ struct ControlBar: View {
 
                 Toggle("", isOn: $arViewModel.isAutoTranslateMode)
                     .labelsHidden()
-                    .onChange(of: arViewModel.isAutoTranslateMode) { newValue in
+                    .onChange(of: arViewModel.isAutoTranslateMode) { oldValue, newValue in
                         if newValue {
                             // When enabling auto-translate, prepare language
                             checkLanguageAndStartAutoTranslate()
@@ -274,8 +274,12 @@ struct ControlBar: View {
                 isCheckingLanguage = false
 
                 if isDownloaded {
-                    // If language already downloaded, start auto-translate immediately
+                    // If language already downloaded, prepare translation configuration and start
                     print("🔍 Starting auto-translate mode with language: \(arViewModel.selectedLanguage.shortName())")
+                    arViewModel.autoTranslateConfiguration = TranslationSession.Configuration(
+                        source: translationService.sourceLanguage,
+                        target: arViewModel.selectedLanguage.locale
+                    )
                     arViewModel.isDetectionActive = true
                 } else {
                     showLanguageDownloadPrompt = true

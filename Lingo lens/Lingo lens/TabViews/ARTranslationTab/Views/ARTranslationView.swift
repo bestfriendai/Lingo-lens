@@ -8,6 +8,7 @@
 import SwiftUI
 import ARKit
 import AVFoundation
+import Translation
 
 /// Main view for AR translation feature
 /// Manages camera permission, AR session, detection box, and child views
@@ -387,6 +388,40 @@ struct ARTranslationView: View {
                 .environmentObject(translationService)
             }
         }
+
+        // Translation task for automatic word translation
+        .background(autoTranslationBackground)
+    }
+
+    /// Background view that handles automatic translation via translationTask
+    private var autoTranslationBackground: some View {
+        Group {
+            if let config = arViewModel.autoTranslateConfiguration {
+                Text("")
+                    .translationTask(config) { session in
+                        // Process translations for detected words
+                        for await word in arViewModel.$wordToTranslate.values {
+                            guard let wordText = word, !wordText.isEmpty else { continue }
+
+                            do {
+                                print("🔄 Auto-translating: \(wordText)")
+                                let response = try await session.translate(wordText)
+
+                                await MainActor.run {
+                                    arViewModel.autoTranslatedText = response.targetText
+                                    print("✅ Translation: \(wordText) → \(response.targetText)")
+                                }
+                            } catch {
+                                print("❌ Auto-translation failed: \(error.localizedDescription)")
+                                await MainActor.run {
+                                    arViewModel.autoTranslatedText = ""
+                                }
+                            }
+                        }
+                    }
+            }
+        }
+        .hidden()
     }
     
     /// Overlay showing auto-translated text

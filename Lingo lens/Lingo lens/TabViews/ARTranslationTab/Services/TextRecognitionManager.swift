@@ -70,9 +70,7 @@ class TextRecognitionManager {
             }
 
             // Create text recognition request
-            let request = VNRecognizeTextRequest { [weak self] request, error in
-                guard let self = self else { return }
-
+            let request = VNRecognizeTextRequest { request, error in
                 if let error = error {
                     SecureLogger.logError("Text recognition request failed", error: error)
                     completion([])
@@ -126,10 +124,18 @@ class TextRecognitionManager {
                 completion(detectedWords)
             }
 
-            // Configure recognition settings for better accuracy
+            // Configure recognition settings for better accuracy and performance
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
             request.recognitionLanguages = self.recognitionLanguages
+
+            // Set region of interest for better performance (only process specific area)
+            if let roi = normalizedROI {
+                request.regionOfInterest = roi
+            }
+
+            // Filter out very small text to reduce noise
+            request.minimumTextHeight = 0.03 // 3% of image height
 
             // Run the image through Vision framework
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])

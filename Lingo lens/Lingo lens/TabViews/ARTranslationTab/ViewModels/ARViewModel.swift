@@ -8,6 +8,7 @@
 import SwiftUI
 import ARKit
 import SceneKit
+import Translation
 
 /// Central view model that manages all AR translation features
 /// Controls object detection state, annotations, and camera session
@@ -38,6 +39,12 @@ class ARViewModel: ObservableObject {
 
     // Automatically translated text for current detected word
     @Published var autoTranslatedText: String = ""
+
+    // Current word to translate (triggers translation via translationTask)
+    @Published var wordToTranslate: String?
+
+    // Translation configuration for auto-translate mode
+    @Published var autoTranslateConfiguration: TranslationSession.Configuration?
     
     // The yellow box that defines where to look for objects
     @Published var adjustableROI: CGRect = .zero
