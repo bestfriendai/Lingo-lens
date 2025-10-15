@@ -13,35 +13,40 @@ import SwiftUI
 /// Connects AR session events to the ARViewModel
 /// Handles camera frames, detects objects, and manages user interactions with AR annotations
 class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
-    
+
     // Reference to view model that holds AR state
     weak var arViewModel: ARViewModel?
-    
+
     // Tracks the number of frames with normal tracking to ensure stability
     private var frameCounter = 0
-    
+
     // Number of consecutive frames with normal tracking required before considering AR session stable
     private let requiredFramesForStability = 10
-    
+
     // Tracks how long we've been in a limited tracking state
     private var timeInLimitedState: TimeInterval = 0
-    
+
     // Maximum time to wait in limited tracking state before proceeding anyway (3 seconds)
     private let maxLimitedStateWaitTime: TimeInterval = 3.0
-    
+
     // Timestamp of the last processed frame for calculating time deltas
     private var lastFrameTimestamp: TimeInterval = 0
-    
-    // Object detection logic is handled by separate manager
-    private let objectDetectionManager = ObjectDetectionManager()
+
+    // Object detection logic is handled by separate manager (injected for testability)
+    private let objectDetectionManager: ObjectDetectionManager
 
     // Frame throttling for performance
     private var isProcessingFrame = false
     private var lastDetectionTime: TimeInterval = 0
     private let detectionInterval: TimeInterval = 0.5 // Run detection every 0.5 seconds max
 
-    init(arViewModel: ARViewModel) {
+    /// Initializes coordinator with injected dependencies
+    /// - Parameters:
+    ///   - arViewModel: The AR view model to coordinate with
+    ///   - objectDetectionManager: Optional detection manager (defaults to new instance for backwards compatibility)
+    init(arViewModel: ARViewModel, objectDetectionManager: ObjectDetectionManager = ObjectDetectionManager()) {
         self.arViewModel = arViewModel
+        self.objectDetectionManager = objectDetectionManager
         super.init()
     }
     

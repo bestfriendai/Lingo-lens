@@ -11,43 +11,59 @@ import SwiftUI
 /// A centralized manager for handling CoreData errors throughout the app
 /// Captures and displays error alerts when data persistence operations fail
 class CoreDataErrorManager: ObservableObject {
-    
+
     // Singleton instance allows global access to error handling
     static let shared = CoreDataErrorManager()
-    
+
     // MARK: - Published Properties
 
     // Controls visibility of the error alert
     @Published var showErrorAlert = false
-    
+
     // The detailed error message to display to the user
     @Published var errorMessage = ""
-    
+
     // Optional closure that will be executed if the user wants to retry the failed operation
     @Published var retryAction: (() -> Void)? = nil
-    
+
+    // MARK: - Private Properties
+
+    // Stored observer tokens for proper cleanup
+    private var storeFailureObserver: NSObjectProtocol?
+    private var saveErrorObserver: NSObjectProtocol?
+
     /// Private initializer enforces singleton pattern and sets up notification observers
     private init() {
         setupNotificationObservers()
     }
-    
+
+    deinit {
+        // Remove all observers to prevent memory leaks
+        if let observer = storeFailureObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = saveErrorObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
     // MARK: - Notification Handling
 
     /// Sets up observers for CoreData error notifications
     /// Listens for both persistent store loading failures and save operation errors
     func setupNotificationObservers() {
-        
+
         // Listen for persistent store loading failures
-        NotificationCenter.default.addObserver(
+        storeFailureObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("CoreDataStoreFailedToLoad"),
             object: nil,
             queue: .main
         ) { [weak self] notification in
             self?.handlePersistentStoreError(notification)
         }
-        
+
         // Listen for save operation failures
-        NotificationCenter.default.addObserver(
+        saveErrorObserver = NotificationCenter.default.addObserver(
             forName: NSNotification.Name("CoreDataSaveError"),
             object: nil,
             queue: .main

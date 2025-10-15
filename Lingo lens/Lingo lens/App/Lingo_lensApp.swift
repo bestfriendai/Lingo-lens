@@ -30,21 +30,15 @@ struct Lingo_lensApp: App {
 
     //  Track if the app initialized
     private static var didInitOnce = false
-    
+
+    // Dependency injection container for centralized dependency management
+    @StateObject private var diContainer = DIContainer.shared
+
     // Track whether to show onboarding
     @State private var showOnboarding = DataManager.shared.didFinishOnBoarding() ? false : true
-    
+
     // Add state for showing splash screen
     @State private var showSplashScreen = true
-    
-    // Provides translation features throughout the app
-    @StateObject private var translationService = TranslationService()
-    
-    // Handles app theme (dark mode, light mode) settings
-    @StateObject private var appearanceManager = AppearanceManager()
-
-    // Manages saved translations in Core Data
-    let persistenceController = PersistenceController.shared
 
     // MARK: - Body
 
@@ -62,34 +56,37 @@ struct Lingo_lensApp: App {
                             showOnboarding = false
                             DataManager.shared.finishOnBoarding()
                         }
-                        .preferredColorScheme(appearanceManager.colorSchemeOption.colorScheme)
+                        .preferredColorScheme(diContainer.appearanceManager.colorSchemeOption.colorScheme)
                         
                     } else {
                         
                         ContentView()
 
                             // Makes translation service available to all child views
-                            .environmentObject(translationService)
-                        
+                            .environmentObject(diContainer.translationService)
+
                             // Makes appearance settings available to all child views
-                            .environmentObject(appearanceManager)
-                        
+                            .environmentObject(diContainer.appearanceManager)
+
+                            // Makes DI container available for factory methods
+                            .environmentObject(diContainer)
+
                             // Applies the user's selected color scheme
-                            .preferredColorScheme(appearanceManager.colorSchemeOption.colorScheme)
-                        
+                            .preferredColorScheme(diContainer.appearanceManager.colorSchemeOption.colorScheme)
+
                             // Gives Core Data access to all views
-                            .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                        
+                            .environment(\.managedObjectContext, diContainer.persistenceController.container.viewContext)
+
                             // Save data when app is terminated
                             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
-                                persistenceController.saveContext()
-                                SpeechManager.shared.deactivateAudioSession()
+                                diContainer.persistenceController.saveContext()
+                                (diContainer.speechManager as? SpeechManager)?.deactivateAudioSession()
                             }
 
                             // Save data when app goes to background
                             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-                                persistenceController.saveContext()
-                                SpeechManager.shared.deactivateAudioSession()
+                                diContainer.persistenceController.saveContext()
+                                (diContainer.speechManager as? SpeechManager)?.deactivateAudioSession()
                             }
                     }
                 }
