@@ -25,30 +25,28 @@ struct ControlBar: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            // Auto-translate mode toggle (simplified, always visible)
+            // Word translation mode toggle (for restaurant menu use case)
             HStack {
-                Image(systemName: arViewModel.isAutoTranslateMode ? "wand.and.stars" : "wand.and.stars.inverse")
+                Image(systemName: arViewModel.isWordTranslationMode ? "doc.text.fill" : "doc.text")
                     .font(.system(size: 16))
-                    .foregroundColor(arViewModel.isAutoTranslateMode ? .green : .gray)
+                    .foregroundColor(arViewModel.isWordTranslationMode ? .green : .gray)
 
-                Text(arViewModel.isAutoTranslateMode ? "Auto-Translate: ON" : "Auto-Translate: OFF")
+                Text(arViewModel.isWordTranslationMode ? "Word Translation: ON" : "Word Translation: OFF")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(arViewModel.isAutoTranslateMode ? .green : .gray)
+                    .foregroundColor(arViewModel.isWordTranslationMode ? .green : .gray)
 
                 Spacer()
 
-                Toggle("", isOn: $arViewModel.isAutoTranslateMode)
+                Toggle("", isOn: $arViewModel.isWordTranslationMode)
                     .labelsHidden()
-                    .onChange(of: arViewModel.isAutoTranslateMode) { oldValue, newValue in
+                    .onChange(of: arViewModel.isWordTranslationMode) { oldValue, newValue in
                         if newValue {
-                            // When enabling auto-translate, prepare language
-                            checkLanguageAndStartAutoTranslate()
+                            // When enabling word translation, prepare language
+                            checkLanguageAndStartWordTranslation()
                         } else {
-                            // When disabling, stop detection
-                            arViewModel.isDetectionActive = false
-                            arViewModel.detectedObjectName = ""
-                            arViewModel.autoTranslatedText = ""
-                            arViewModel.autoTranslateConfiguration = nil
+                            // When disabling, clear all word translations
+                            arViewModel.clearWordTranslations()
+                            arViewModel.wordTranslationConfiguration = nil
                         }
                     }
             }
@@ -60,7 +58,7 @@ struct ControlBar: View {
             HStack {
                 settingsButton
                 Spacer()
-                detectionToggleButton
+                translateItemButton
                 Spacer()
                 addAnnotationButton
             }
@@ -113,31 +111,23 @@ struct ControlBar: View {
         .disabled(settingsViewModel.isExpanded)
     }
     
-    // Center button - toggles object detection
-    private var detectionToggleButton: some View {
+    // Center button - manual "Translate Item" using detection box
+    private var translateItemButton: some View {
         Button(action: {
-            if arViewModel.isDetectionActive {
-                print("👆 Button pressed: Stop detection")
-                
-                // If active, stop detection
-                arViewModel.isDetectionActive = false
-                arViewModel.detectedObjectName = ""
-            } else {
-                print("👆 Button pressed: Start detection")
+            print("👆 Button pressed: Translate Item")
 
-                // If inactive, close settings panel if open
-                if settingsViewModel.isExpanded {
-                    print("⚙️ Closing label settings panel before starting detection")
-                    settingsViewModel.toggleExpanded()
-                }
-                
-                // Then check language and start detection
-                print("🔍 Checking language availability before starting detection")
-                checkLanguageAndStartDetection()
+            // Close settings panel if open
+            if settingsViewModel.isExpanded {
+                print("⚙️ Closing label settings panel before translating item")
+                settingsViewModel.toggleExpanded()
             }
+
+            // Enable object detection mode temporarily to show the box and detect object
+            arViewModel.isObjectDetectionMode = true
+            checkLanguageAndStartDetection()
         }) {
             if isCheckingLanguage {
-                
+
                 // Checking language download status
                 HStack(spacing: 8) {
                     ProgressView()
@@ -152,7 +142,7 @@ struct ControlBar: View {
                 .background(Color.orange.opacity(0.8))
                 .cornerRadius(12)
             } else if isPreparingLanguage {
-                
+
                 // Preparing language for translation
                 HStack(spacing: 8) {
                     ProgressView()
@@ -167,23 +157,23 @@ struct ControlBar: View {
                 .background(Color.blue.opacity(0.8))
                 .cornerRadius(12)
             } else {
-                
-                // Regular toggle button
-                Text(arViewModel.isDetectionActive ?
-                     "Stop Detection" : "Start Detection")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(12)
-                    .frame(minWidth: 140)
-                    .background(arViewModel.isDetectionActive ?
-                              Color.red.opacity(0.8) : Color.green.opacity(0.8))
-                    .cornerRadius(12)
+
+                // Manual translate item button
+                HStack(spacing: 6) {
+                    Image(systemName: "viewfinder")
+                        .font(.system(size: 18))
+                    Text("Translate Item")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(12)
+                .frame(minWidth: 140)
+                .background(Color.purple.opacity(0.8))
+                .cornerRadius(12)
             }
         }
-        .accessibilityLabel(arViewModel.isDetectionActive ? "Stop Object Detection" : "Start Object Detection")
-        .accessibilityHint(arViewModel.isDetectionActive ?
-            "Stop detecting objects in camera view" :
-            "Begin detecting objects in camera view")
+        .accessibilityLabel("Translate Item")
+        .accessibilityHint("Shows detection box to identify and translate an object")
         .disabled(isCheckingLanguage || isPreparingLanguage)
     }
     
@@ -268,8 +258,8 @@ struct ControlBar: View {
         }
     }
 
-    // Checks language and starts auto-translate mode
-    private func checkLanguageAndStartAutoTranslate() {
+    // Checks language and starts word translation mode
+    private func checkLanguageAndStartWordTranslation() {
         isCheckingLanguage = true
 
         Task {
@@ -281,13 +271,12 @@ struct ControlBar: View {
                 isCheckingLanguage = false
 
                 if isDownloaded {
-                    // If language already downloaded, prepare translation configuration and start
-                    print("🔍 Starting auto-translate mode with language: \(arViewModel.selectedLanguage.shortName())")
-                    arViewModel.autoTranslateConfiguration = TranslationSession.Configuration(
+                    // If language already downloaded, prepare translation configuration
+                    print("🔍 Starting word translation mode with language: \(arViewModel.selectedLanguage.shortName())")
+                    arViewModel.wordTranslationConfiguration = TranslationSession.Configuration(
                         source: translationService.sourceLanguage,
                         target: arViewModel.selectedLanguage.locale
                     )
-                    arViewModel.isDetectionActive = true
                 } else {
                     showLanguageDownloadPrompt = true
                 }

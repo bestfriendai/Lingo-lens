@@ -31,10 +31,13 @@ class ARViewModel: ObservableObject {
     // Name of object currently detected within the ROI
     @Published var detectedObjectName: String = ""
 
-    // Controls automatic text recognition and translation mode (enabled by default)
-    @Published var isAutoTranslateMode = true
+    // Controls automatic full-frame word translation mode (enabled by default - restaurant menu use case)
+    @Published var isWordTranslationMode = true
 
-    // Currently detected words for automatic translation
+    // Controls manual object detection mode using the detection box
+    @Published var isObjectDetectionMode = false
+
+    // Currently detected words from full frame scan
     @Published var detectedWords: [DetectedWord] = []
 
     // Automatically translated text for current detected word
@@ -43,8 +46,11 @@ class ARViewModel: ObservableObject {
     // Current word to translate (triggers translation via translationTask)
     @Published var wordToTranslate: String?
 
-    // Translation configuration for auto-translate mode
-    @Published var autoTranslateConfiguration: TranslationSession.Configuration?
+    // Translation configuration for word translation mode
+    @Published var wordTranslationConfiguration: TranslationSession.Configuration?
+
+    // Queue of words pending translation
+    @Published var pendingWordTranslations: [DetectedWord] = []
     
     // The yellow box that defines where to look for objects
     @Published var adjustableROI: CGRect = .zero
@@ -103,10 +109,14 @@ class ARViewModel: ObservableObject {
     
     // Reference to AR scene view (set by ARViewContainer)
     weak var sceneView: ARSCNView?
-    
-    // All annotations placed in 3D space
+
+    // Manual object detection annotations (placed using "Add" button)
     // Contains the node, original text, and world position
     var annotationNodes: [(node: SCNNode, originalText: String, worldPos: SIMD3<Float>)] = []
+
+    // Automatic word translation nodes (AR-anchored translations for restaurant menu use case)
+    // Maps word ID to its translation node for efficient updates
+    var wordTranslationNodes: [UUID: SCNNode] = [:]
     
     
     // MARK: - Initialization
@@ -349,12 +359,91 @@ class ARViewModel: ObservableObject {
         }
     }
     
-    /// Removes all annotations from the scene
+    /// Removes all manual object detection annotations from the scene
     func resetAnnotations() {
         for (node, _, _) in annotationNodes {
             node.removeFromParentNode()
         }
         annotationNodes.removeAll()
+    }
+
+    /// Removes all word translation nodes from the scene
+    func clearWordTranslations() {
+        for (_, node) in wordTranslationNodes {
+            node.removeFromParentNode()
+        }
+        wordTranslationNodes.removeAll()
+        detectedWords.removeAll()
+    }
+
+    /// Adds or updates a word translation node in AR space
+    /// - Parameters:
+    ///   - word: The detected word with its bounding box
+    ///   - translation: The translated text
+    ///   - screenPoint: The center point of the word on screen
+    func addWordTranslation(word: DetectedWord, translation: String, at screenPoint: CGPoint) {
+        guard let sceneView = sceneView else { return }
+
+        // Try to find a plane at the word's screen position using raycasting
+        if let query = sceneView.raycastQuery(from: screenPoint, allowing: .estimatedPlane, alignment: .any) {
+            let results = sceneView.session.raycast(query)
+            if let result = results.first {
+                // Create or update translation node
+                let translationNode = createWordTranslationNode(originalText: word.text, translatedText: translation)
+                translationNode.simdTransform = result.worldTransform
+
+                // Add to scene
+                sceneView.scene.rootNode.addChildNode(translationNode)
+
+                // Store in dictionary
+                wordTranslationNodes[word.id] = translationNode
+
+                print("✅ Added word translation: \"\(word.text)\" → \"\(translation)\" at screen position \(screenPoint)")
+            } else {
+                print("⚠️ Could not find AR plane for word: \(word.text) at \(screenPoint)")
+            }
+        }
+    }
+
+    /// Creates a simple AR node for word translation
+    /// - Parameters:
+    ///   - originalText: The original detected word
+    ///   - translatedText: The translation to display
+    /// - Returns: SCNNode with translation text
+    private func createWordTranslationNode(originalText: String, translatedText: String) -> SCNNode {
+        // Create text geometry
+        let text = SCNText(string: translatedText, extrusionDepth: 0.5)
+        text.font = UIFont.systemFont(ofSize: 10, weight: .semibold)
+        text.flatness = 0.1
+        text.firstMaterial?.diffuse.contents = UIColor.white
+        text.firstMaterial?.specular.contents = UIColor.white
+        text.firstMaterial?.isDoubleSided = true
+
+        // Add black outline for better visibility
+        text.firstMaterial?.multiply.contents = UIColor.white
+        text.chamferRadius = 0.2
+
+        // Create text node
+        let textNode = SCNNode(geometry: text)
+        textNode.scale = SCNVector3(0.002, 0.002, 0.002) // Small scale for AR
+
+        // Center the text
+        let (min, max) = textNode.boundingBox
+        let dx = (max.x - min.x) / 2.0
+        let dy = (max.y - min.y) / 2.0
+        textNode.pivot = SCNMatrix4MakeTranslation(min.x + dx, min.y + dy, 0)
+
+        // Container node
+        let containerNode = SCNNode()
+        containerNode.name = "wordTranslation_\(originalText)"
+        containerNode.addChildNode(textNode)
+
+        // Make text always face the camera
+        let billboard = SCNBillboardConstraint()
+        billboard.freeAxes = [.X, .Y, .Z]
+        containerNode.constraints = [billboard]
+
+        return containerNode
     }
     
     // MARK: - Annotation Visuals

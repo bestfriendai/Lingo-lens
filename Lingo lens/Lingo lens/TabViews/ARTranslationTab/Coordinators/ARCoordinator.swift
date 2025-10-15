@@ -207,8 +207,8 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
                           exifOrientation: exifOrientation,
                           normalizedROI: normalizedROI)
 
-        // Also process text recognition if auto-translate mode is enabled
-        guard arViewModel.isAutoTranslateMode else { return }
+        // Also process word translation if enabled
+        guard arViewModel.isWordTranslationMode else { return }
 
         // Skip if already processing or not enough time has passed (throttling)
         let textRecognitionTime = frame.timestamp
@@ -229,10 +229,10 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
             }
         }
 
-        // Process text recognition
-        processTextRecognition(pixelBuffer: pixelBuffer,
+        // Process full-frame word translation
+        processWordTranslation(pixelBuffer: pixelBuffer,
                               exifOrientation: exifOrientation,
-                              normalizedROI: normalizedROI)
+                              screenSize: CGSize(width: screenWidth, height: screenHeight))
     }
 
     /// Handles AR session errors by showing a user-friendly error message
@@ -296,10 +296,10 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         }
     }
 
-    /// Handles text recognition from camera frames for automatic translation
-    private func processTextRecognition(pixelBuffer: CVPixelBuffer,
+    /// Processes full-frame word translation for restaurant menu use case
+    private func processWordTranslation(pixelBuffer: CVPixelBuffer,
                                        exifOrientation: CGImagePropertyOrientation,
-                                       normalizedROI: CGRect) {
+                                       screenSize: CGSize) {
 
         // Safety timeout to prevent stuck text recognition state
         let recognitionStartTime = Date()
@@ -311,11 +311,10 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
             }
         }
 
-        // Send the frame to text recognition manager
-        textRecognitionManager.recognizeText(
+        // Send the entire frame to text recognition manager
+        textRecognitionManager.recognizeAllText(
             pixelBuffer: pixelBuffer,
-            exifOrientation: exifOrientation,
-            normalizedROI: normalizedROI
+            exifOrientation: exifOrientation
         ) { [weak self] detectedWords in
 
             // Update the UI with detected words on main thread using weak self
@@ -326,25 +325,15 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
                 // Update detected words
                 arViewModel.detectedWords = detectedWords
 
-                // Auto-translate the first confident word
-                if let firstWord = detectedWords.first(where: { $0.isConfident }) {
-                    self.autoTranslateWord(firstWord.text, arViewModel: arViewModel)
-                } else {
-                    arViewModel.autoTranslatedText = ""
-                }
+                // Queue confident words for translation (limit to prevent overload)
+                let confidentWords = detectedWords.filter { $0.isConfident }.prefix(20)
+                arViewModel.pendingWordTranslations = Array(confidentWords)
+
+                print("📝 Detected \(detectedWords.count) words, queuing \(confidentWords.count) for translation")
 
                 // Reset processing flag to allow next recognition
                 self.isProcessingText = false
             }
-        }
-    }
-
-    /// Automatically translates a detected word
-    private func autoTranslateWord(_ word: String, arViewModel: ARViewModel) {
-        // Store the word to be translated for the view to handle via translationTask
-        DispatchQueue.main.async {
-            arViewModel.detectedObjectName = word
-            arViewModel.wordToTranslate = word
         }
     }
 

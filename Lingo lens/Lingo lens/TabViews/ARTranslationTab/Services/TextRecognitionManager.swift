@@ -36,16 +36,15 @@ class TextRecognitionManager {
 
     // MARK: - Text Recognition
 
-    /// Detects text in camera frame and returns individual words with their positions
+    /// Detects ALL text in camera frame and returns individual words with their positions
+    /// This version processes the entire frame for restaurant menu translation use case
     /// - Parameters:
     ///   - pixelBuffer: Raw camera frame from ARKit
     ///   - exifOrientation: Current orientation of device camera
-    ///   - normalizedROI: Optional region of interest in normalized coordinates (0-1)
     ///   - completion: Callback with array of detected words or empty array if none found
-    func recognizeText(pixelBuffer: CVPixelBuffer,
-                      exifOrientation: CGImagePropertyOrientation,
-                      normalizedROI: CGRect? = nil,
-                      completion: @escaping ([DetectedWord]) -> Void) {
+    func recognizeAllText(pixelBuffer: CVPixelBuffer,
+                         exifOrientation: CGImagePropertyOrientation,
+                         completion: @escaping ([DetectedWord]) -> Void) {
 
         // Perform all heavy processing on background queue
         processingQueue.async { [weak self] in
@@ -55,7 +54,7 @@ class TextRecognitionManager {
             }
 
             #if DEBUG
-            SecureLogger.log("Starting text recognition", level: .info)
+            SecureLogger.log("Starting full-frame text recognition", level: .info)
             #endif
 
             // Convert pixel buffer to CIImage and fix orientation
@@ -89,14 +88,120 @@ class TextRecognitionManager {
                     // Get top candidate text
                     guard let topCandidate = observation.topCandidates(1).first else { continue }
 
-                    // Filter ROI if specified
-                    if let roi = normalizedROI {
-                        let textBounds = observation.boundingBox
-                        // Check if text overlaps with ROI
-                        if !textBounds.intersects(roi) {
-                            continue
+                    // Split text into individual words
+                    let text = topCandidate.string
+                    let words = text.components(separatedBy: .whitespacesAndNewlines)
+                        .filter { !$0.isEmpty }
+
+                    // Calculate approximate bounding box per word
+                    let totalChars = text.count
+                    let boundingBox = observation.boundingBox
+
+                    var currentCharIndex = 0
+                    for word in words {
+                        // Filter out non-alphabetic words and very short words
+                        let cleanedWord = word.trimmingCharacters(in: .punctuationCharacters)
+                        if cleanedWord.count >= 2 && cleanedWord.rangeOfCharacter(from: .letters) != nil {
+
+                            // Estimate word's bounding box position within the line
+                            let wordCharCount = word.count
+                            let wordRatio = CGFloat(wordCharCount) / CGFloat(max(totalChars, 1))
+                            let charOffset = CGFloat(currentCharIndex) / CGFloat(max(totalChars, 1))
+
+                            // Create approximate bounding box for this word
+                            let wordBoundingBox = CGRect(
+                                x: boundingBox.origin.x + (boundingBox.width * charOffset),
+                                y: boundingBox.origin.y,
+                                width: boundingBox.width * wordRatio,
+                                height: boundingBox.height
+                            )
+
+                            let detectedWord = DetectedWord(
+                                text: cleanedWord,
+                                confidence: topCandidate.confidence,
+                                boundingBox: wordBoundingBox
+                            )
+                            detectedWords.append(detectedWord)
                         }
+                        currentCharIndex += word.count + 1 // +1 for space
                     }
+                }
+
+                #if DEBUG
+                SecureLogger.log("Text recognition found \(detectedWords.count) words in full frame", level: .info)
+                #endif
+
+                completion(detectedWords)
+            }
+
+            // Configure recognition settings for better accuracy and performance
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+            request.recognitionLanguages = self.recognitionLanguages
+
+            // NO region of interest - process entire frame
+            // Filter out very small text to reduce noise
+            request.minimumTextHeight = 0.015 // 1.5% of image height for better menu detection
+
+            // Run the image through Vision framework
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            do {
+                try handler.perform([request])
+            } catch {
+                SecureLogger.logError("Vision text recognition failed", error: error)
+                completion([])
+            }
+        }
+    }
+
+    /// Detects text in a specific region for object detection mode
+    /// - Parameters:
+    ///   - pixelBuffer: Raw camera frame from ARKit
+    ///   - exifOrientation: Current orientation of device camera
+    ///   - normalizedROI: Region of interest in normalized coordinates (0-1)
+    ///   - completion: Callback with array of detected words or empty array if none found
+    func recognizeTextInROI(pixelBuffer: CVPixelBuffer,
+                           exifOrientation: CGImagePropertyOrientation,
+                           normalizedROI: CGRect,
+                           completion: @escaping ([DetectedWord]) -> Void) {
+
+        // Perform all heavy processing on background queue
+        processingQueue.async { [weak self] in
+            guard let self = self else {
+                completion([])
+                return
+            }
+
+            // Convert pixel buffer to CIImage and fix orientation
+            let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+                .oriented(forExifOrientation: exifOrientation.numericValue)
+
+            // Convert CIImage to CGImage for Vision framework
+            guard let cgImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent) else {
+                SecureLogger.logError("Failed to create CGImage from CIImage for text recognition")
+                completion([])
+                return
+            }
+
+            // Create text recognition request
+            let request = VNRecognizeTextRequest { request, error in
+                if let error = error {
+                    SecureLogger.logError("Text recognition request failed", error: error)
+                    completion([])
+                    return
+                }
+
+                // Process recognized text observations
+                guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                    completion([])
+                    return
+                }
+
+                var detectedWords: [DetectedWord] = []
+
+                for observation in observations {
+                    // Get top candidate text
+                    guard let topCandidate = observation.topCandidates(1).first else { continue }
 
                     // Split text into individual words
                     let text = topCandidate.string
@@ -117,10 +222,6 @@ class TextRecognitionManager {
                     }
                 }
 
-                #if DEBUG
-                SecureLogger.log("Text recognition found \(detectedWords.count) words", level: .info)
-                #endif
-
                 completion(detectedWords)
             }
 
@@ -128,13 +229,7 @@ class TextRecognitionManager {
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = true
             request.recognitionLanguages = self.recognitionLanguages
-
-            // Set region of interest for better performance (only process specific area)
-            if let roi = normalizedROI {
-                request.regionOfInterest = roi
-            }
-
-            // Filter out very small text to reduce noise
+            request.regionOfInterest = normalizedROI
             request.minimumTextHeight = 0.03 // 3% of image height
 
             // Run the image through Vision framework
@@ -155,11 +250,13 @@ class TextRecognitionManager {
     }
 }
 
-/// Represents a detected word with its metadata
-struct DetectedWord {
+/// Represents a detected word with its metadata and translation
+struct DetectedWord: Identifiable {
+    let id = UUID()
     let text: String
     let confidence: Float
     let boundingBox: CGRect
+    var translation: String? = nil
 
     /// Returns true if confidence is above minimum threshold
     var isConfident: Bool {

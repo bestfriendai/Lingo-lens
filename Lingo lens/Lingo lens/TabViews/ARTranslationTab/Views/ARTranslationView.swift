@@ -148,8 +148,8 @@ struct ARTranslationView: View {
                     arViewModel.resumeARSession()
                     alreadyResumedARSession = true
 
-                    // Automatically start auto-translate mode after AR session loads
-                    startAutoTranslateAfterDelay()
+                    // Automatically start word translation mode after AR session loads
+                    startWordTranslationAfterDelay()
                 }
             }
 
@@ -237,24 +237,36 @@ struct ARTranslationView: View {
             
             // AR camera view container
             ARViewContainer(arViewModel: arViewModel)
-            
-            // Detection box overlay (only shown when detection is active)
-            if arViewModel.isDetectionActive {
+
+            // Detection box overlay (only shown during manual object detection mode)
+            if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
                 boundingBoxView
             }
             
             VStack {
 
-                // Top section - shows detection status
-                if arViewModel.isDetectionActive && !arViewModel.isAutoTranslateMode {
+                // Top section - shows detection status for manual object detection mode
+                if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
                     DetectionLabel(detectedObjectName: arViewModel.detectedObjectName)
                         .padding(.top, 10)
                 }
 
-                // Auto-translate overlay
-                if arViewModel.isAutoTranslateMode && arViewModel.isDetectionActive {
-                    autoTranslateOverlay
-                        .padding(.top, 10)
+                // Word translation mode indicator
+                if arViewModel.isWordTranslationMode {
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                        Text("Translating words...")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(20)
+                    .padding(.top, 10)
                 }
 
                 // Error message when annotation placement fails
@@ -272,7 +284,7 @@ struct ARTranslationView: View {
                 }
 
                 Spacer()
-                
+
                 // Bottom control bar
                 ControlBar(
                     arViewModel: arViewModel,
@@ -393,118 +405,63 @@ struct ARTranslationView: View {
         }
 
         // Translation task for automatic word translation
-        .background(autoTranslationBackground)
+        .background(wordTranslationBackground)
     }
 
-    /// Background view that handles automatic translation via translationTask
-    private var autoTranslationBackground: some View {
+    /// Background view that handles batch word translation via translationTask
+    private var wordTranslationBackground: some View {
         Group {
-            if let config = arViewModel.autoTranslateConfiguration {
+            if let config = arViewModel.wordTranslationConfiguration {
                 Text("")
                     .translationTask(config) { session in
-                        // Process translations for detected words
-                        for await word in arViewModel.$wordToTranslate.values {
-                            guard let wordText = word, !wordText.isEmpty else { continue }
+                        // Process translations for pending words
+                        for await pendingWords in arViewModel.$pendingWordTranslations.values {
+                            guard !pendingWords.isEmpty else { continue }
 
-                            do {
-                                print("🔄 Auto-translating: \(wordText)")
-                                let response = try await session.translate(wordText)
+                            print("🔄 Translating \(pendingWords.count) words...")
 
-                                await MainActor.run {
-                                    arViewModel.autoTranslatedText = response.targetText
-                                    print("✅ Translation: \(wordText) → \(response.targetText)")
+                            // Translate each word and add AR anchor
+                            for word in pendingWords {
+                                do {
+                                    let response = try await session.translate(word.text)
+                                    let translation = response.targetText
+
+                                    await MainActor.run {
+                                        // Convert normalized bounding box to screen coordinates
+                                        guard let sceneView = arViewModel.sceneView else { return }
+
+                                        let screenWidth = sceneView.bounds.width
+                                        let screenHeight = sceneView.bounds.height
+
+                                        // Vision framework uses bottom-left origin, convert to top-left
+                                        let screenX = word.boundingBox.midX * screenWidth
+                                        let screenY = (1.0 - word.boundingBox.midY) * screenHeight
+
+                                        let screenPoint = CGPoint(x: screenX, y: screenY)
+
+                                        // Add AR-anchored translation
+                                        arViewModel.addWordTranslation(
+                                            word: word,
+                                            translation: translation,
+                                            at: screenPoint
+                                        )
+                                    }
+
+                                    print("✅ Translated: \(word.text) → \(translation)")
+                                } catch {
+                                    print("❌ Translation failed for '\(word.text)': \(error.localizedDescription)")
                                 }
-                            } catch {
-                                print("❌ Auto-translation failed: \(error.localizedDescription)")
-                                await MainActor.run {
-                                    arViewModel.autoTranslatedText = ""
-                                }
+                            }
+
+                            // Clear pending translations
+                            await MainActor.run {
+                                arViewModel.pendingWordTranslations.removeAll()
                             }
                         }
                     }
             }
         }
         .hidden()
-    }
-    
-    /// Overlay showing auto-translated text
-    private var autoTranslateOverlay: some View {
-        VStack(spacing: 10) {
-            // Always show status when auto-translate is active
-            if arViewModel.isDetectionActive {
-                // Active scanning indicator
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 8, height: 8)
-                        .overlay(
-                            Circle()
-                                .fill(Color.green.opacity(0.3))
-                                .scaleEffect(1.5)
-                        )
-
-                    Text("Scanning...")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.black.opacity(0.6))
-                .cornerRadius(20)
-            }
-
-            // Detected words
-            if let firstWord = arViewModel.detectedWords.first {
-                VStack(spacing: 8) {
-                    // Detected word
-                    HStack(spacing: 6) {
-                        Image(systemName: "doc.text.magnifyingglass")
-                            .font(.caption)
-                        Text(firstWord.text)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 14)
-                    .background(Color.blue.opacity(0.85))
-                    .cornerRadius(16)
-                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
-
-                    // Translation arrow
-                    if !arViewModel.autoTranslatedText.isEmpty {
-                        Image(systemName: "arrow.down")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                            .padding(.vertical, 2)
-
-                        // Translated text
-                        HStack(spacing: 6) {
-                            Image(systemName: "globe")
-                                .font(.caption)
-                            Text(arViewModel.autoTranslatedText)
-                                .font(.system(size: 32, weight: .bold))
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 28)
-                        .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.green.opacity(0.9), Color.green.opacity(0.7)]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .cornerRadius(20)
-                        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-                    }
-                }
-            }
-        }
-        .padding(.horizontal)
-        .animation(.easeInOut(duration: 0.3), value: arViewModel.detectedWords.count)
-        .animation(.easeInOut(duration: 0.3), value: arViewModel.autoTranslatedText)
     }
 
     /// View that handles the draggable detection box
@@ -649,18 +606,18 @@ struct ARTranslationView: View {
         return newRect
     }
 
-    /// Automatically starts auto-translate mode after AR session is ready
-    private func startAutoTranslateAfterDelay() {
+    /// Automatically starts word translation mode after AR session is ready
+    private func startWordTranslationAfterDelay() {
         // Wait for AR session to stabilize
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            guard self.arViewModel.isAutoTranslateMode else { return }
+            guard self.arViewModel.isWordTranslationMode else { return }
             guard !self.arViewModel.isARSessionLoading else {
                 // If still loading, try again
-                self.startAutoTranslateAfterDelay()
+                self.startWordTranslationAfterDelay()
                 return
             }
 
-            print("🚀 Auto-starting translation mode")
+            print("🚀 Auto-starting word translation mode for restaurant menu use case")
 
             // Check if language is downloaded
             Task {
@@ -670,29 +627,16 @@ struct ARTranslationView: View {
 
                 await MainActor.run {
                     if isDownloaded {
-                        // Prepare translation configuration
-                        self.arViewModel.autoTranslateConfiguration = TranslationSession.Configuration(
+                        // Prepare translation configuration for word translation
+                        self.arViewModel.wordTranslationConfiguration = TranslationSession.Configuration(
                             source: self.translationService.sourceLanguage,
                             target: self.arViewModel.selectedLanguage.locale
                         )
 
-                        // Initialize ROI in center of screen
-                        if let sceneView = self.arViewModel.sceneView {
-                            let boxSize: CGFloat = 200
-                            self.arViewModel.adjustableROI = CGRect(
-                                x: (sceneView.bounds.width - boxSize) / 2,
-                                y: (sceneView.bounds.height - boxSize) / 2,
-                                width: boxSize,
-                                height: boxSize
-                            )
-                        }
-
-                        // Start detection automatically
-                        self.arViewModel.isDetectionActive = true
-                        print("✅ Auto-translate started successfully")
+                        print("✅ Word translation mode started successfully")
                     } else {
                         print("⚠️ Language not downloaded - user needs to download manually")
-                        // Keep toggle on but don't start detection yet
+                        // Keep mode on but translations won't work until language is downloaded
                     }
                 }
             }
