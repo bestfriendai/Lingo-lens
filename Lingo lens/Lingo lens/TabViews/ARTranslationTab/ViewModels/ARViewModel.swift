@@ -37,6 +37,9 @@ class ARViewModel: ObservableObject {
     // Controls manual object detection mode using the detection box
     @Published var isObjectDetectionMode = false
 
+    // Use 2D overlays (Google Translate-style, FAST) vs 3D AR anchors (persistent, SLOW)
+    @Published var use2DOverlays = true
+
     // Currently detected words from full frame scan
     @Published var detectedWords: [DetectedWord] = []
 
@@ -51,6 +54,9 @@ class ARViewModel: ObservableObject {
 
     // Queue of words pending translation
     @Published var pendingWordTranslations: [DetectedWord] = []
+
+    // 2D Translation overlays (Google Translate-style)
+    @Published var translationOverlays: [UUID: TranslationOverlay2D] = [:]
     
     // The yellow box that defines where to look for objects
     @Published var adjustableROI: CGRect = .zero
@@ -374,6 +380,13 @@ class ARViewModel: ObservableObject {
         }
         wordTranslationNodes.removeAll()
         detectedWords.removeAll()
+        translationOverlays.removeAll()
+        pendingWordTranslations.removeAll()
+    }
+
+    /// Removes stale 2D overlays (older than 2 seconds)
+    func cleanupStaleOverlays() {
+        translationOverlays = translationOverlays.filter { !$0.value.isStale }
     }
 
     /// Adds or updates a word translation node in AR space
@@ -622,6 +635,23 @@ class ARViewModel: ObservableObject {
         
         // Reverse order because SpriteKit's coordinate system is different
         return lines.reversed()
+    }
+}
+
+// MARK: - 2D Translation Overlay Model
+
+/// Represents a 2D translation overlay for Google Translate-style fast translation
+struct TranslationOverlay2D: Identifiable {
+    let id: UUID
+    let originalWord: String
+    let translatedText: String
+    let screenPosition: CGPoint  // Position in screen coordinates
+    let boundingBox: CGRect  // Original Vision bounding box (normalized 0-1)
+    let timestamp: Date
+
+    /// Returns true if this overlay is stale (older than 2 seconds)
+    var isStale: Bool {
+        Date().timeIntervalSince(timestamp) > 2.0
     }
 }
 

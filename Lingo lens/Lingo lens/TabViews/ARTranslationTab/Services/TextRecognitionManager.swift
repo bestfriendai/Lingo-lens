@@ -134,14 +134,16 @@ class TextRecognitionManager {
                 completion(detectedWords)
             }
 
-            // Configure recognition settings for better accuracy and performance
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
+            // Configure recognition settings for SPEED (Google Translate-style)
+            // Use .fast instead of .accurate for real-time translation (100ms vs 500ms)
+            request.recognitionLevel = .fast
+            request.usesLanguageCorrection = false  // Disable for speed
+            request.usesCPUOnly = true  // Leave GPU for ARKit rendering
             request.recognitionLanguages = self.recognitionLanguages
 
             // NO region of interest - process entire frame
             // Filter out very small text to reduce noise
-            request.minimumTextHeight = 0.015 // 1.5% of image height for better menu detection
+            request.minimumTextHeight = 0.02 // 2% of image height - larger for faster processing
 
             // Run the image through Vision framework
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])

@@ -58,6 +58,9 @@ struct ARTranslationView: View {
     // Flag to track if UserDefaults have been loaded
     @State private var hasLoadedPreferences = false
 
+    // Timer for cleaning up stale 2D overlays
+    @State private var cleanupTimer: Timer? = nil
+
     // Access to translation service
     @EnvironmentObject var translationService: TranslationService
 
@@ -154,8 +157,11 @@ struct ARTranslationView: View {
             }
 
             setupOrientationObserver()
+
+            // Start cleanup timer for 2D overlays
+            startCleanupTimer()
         }
-        
+
         // Observe camera permission changes
         .onChange(of: cameraPermissionManager.showPermissionAlert) { oldValue, newValue in
             
@@ -228,15 +234,23 @@ struct ARTranslationView: View {
                 NotificationCenter.default.removeObserver(token)
                 orientationObserver = nil
             }
+
+            // Stop cleanup timer
+            stopCleanupTimer()
         }
     }
     
     /// Main AR view that contains camera feed, detection UI, and controls
     private var mainARView: some View {
         ZStack {
-            
+
             // AR camera view container
             ARViewContainer(arViewModel: arViewModel)
+
+            // 2D Translation overlays (Google Translate-style fast mode)
+            if arViewModel.use2DOverlays && arViewModel.isWordTranslationMode {
+                translationOverlaysView
+            }
 
             // Detection box overlay (only shown during manual object detection mode)
             if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
@@ -420,34 +434,51 @@ struct ARTranslationView: View {
 
                             print("🔄 Translating \(pendingWords.count) words...")
 
-                            // Translate each word and add AR anchor
+                            // Translate each word
                             for word in pendingWords {
                                 do {
                                     let response = try await session.translate(word.text)
                                     let translation = response.targetText
 
                                     await MainActor.run {
-                                        // Convert normalized bounding box to screen coordinates
                                         guard let sceneView = arViewModel.sceneView else { return }
 
-                                        let screenWidth = sceneView.bounds.width
-                                        let screenHeight = sceneView.bounds.height
+                                        if arViewModel.use2DOverlays {
+                                            // FAST MODE: 2D overlays (Google Translate-style)
+                                            let screenPosition = convertVisionToScreen(
+                                                boundingBox: word.boundingBox,
+                                                sceneView: sceneView
+                                            )
 
-                                        // Vision framework uses bottom-left origin, convert to top-left
-                                        let screenX = word.boundingBox.midX * screenWidth
-                                        let screenY = (1.0 - word.boundingBox.midY) * screenHeight
+                                            let overlay = TranslationOverlay2D(
+                                                id: word.id,
+                                                originalWord: word.text,
+                                                translatedText: translation,
+                                                screenPosition: screenPosition,
+                                                boundingBox: word.boundingBox,
+                                                timestamp: Date()
+                                            )
 
-                                        let screenPoint = CGPoint(x: screenX, y: screenY)
+                                            arViewModel.translationOverlays[word.id] = overlay
+                                            print("✅ 2D Overlay: \(word.text) → \(translation)")
+                                        } else {
+                                            // SLOW MODE: 3D AR anchors (persistent)
+                                            let screenWidth = sceneView.bounds.width
+                                            let screenHeight = sceneView.bounds.height
 
-                                        // Add AR-anchored translation
-                                        arViewModel.addWordTranslation(
-                                            word: word,
-                                            translation: translation,
-                                            at: screenPoint
-                                        )
+                                            let screenX = word.boundingBox.midX * screenWidth
+                                            let screenY = (1.0 - word.boundingBox.midY) * screenHeight
+
+                                            let screenPoint = CGPoint(x: screenX, y: screenY)
+
+                                            arViewModel.addWordTranslation(
+                                                word: word,
+                                                translation: translation,
+                                                at: screenPoint
+                                            )
+                                            print("✅ 3D Anchor: \(word.text) → \(translation)")
+                                        }
                                     }
-
-                                    print("✅ Translated: \(word.text) → \(translation)")
                                 } catch {
                                     print("❌ Translation failed for '\(word.text)': \(error.localizedDescription)")
                                 }
@@ -462,6 +493,45 @@ struct ARTranslationView: View {
             }
         }
         .hidden()
+    }
+
+    /// View that renders 2D translation overlays (Google Translate-style)
+    private var translationOverlaysView: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Render each translation overlay
+                ForEach(Array(arViewModel.translationOverlays.values), id: \.id) { overlay in
+                    // Skip stale overlays (older than 2 seconds)
+                    if !overlay.isStale {
+                        Text(overlay.translatedText)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.85))
+                            .cornerRadius(6)
+                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                            .position(overlay.screenPosition)
+                    }
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+        }
+        .allowsHitTesting(false) // Allow touches to pass through to AR view
+    }
+
+    /// Converts Vision framework normalized coordinates to screen coordinates
+    /// Vision uses bottom-left origin (0,0), UIKit uses top-left origin
+    private func convertVisionToScreen(boundingBox: CGRect, sceneView: ARSCNView) -> CGPoint {
+        let screenWidth = sceneView.bounds.width
+        let screenHeight = sceneView.bounds.height
+
+        // Vision coordinates: (0,0) = bottom-left, (1,1) = top-right
+        // UIKit coordinates: (0,0) = top-left
+        let screenX = boundingBox.midX * screenWidth
+        let screenY = (1.0 - boundingBox.midY) * screenHeight
+
+        return CGPoint(x: screenX, y: screenY)
     }
 
     /// View that handles the draggable detection box
@@ -641,6 +711,20 @@ struct ARTranslationView: View {
                 }
             }
         }
+    }
+
+    /// Starts periodic cleanup of stale 2D overlays
+    private func startCleanupTimer() {
+        // Clean up stale overlays every 1 second
+        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak arViewModel] _ in
+            arViewModel?.cleanupStaleOverlays()
+        }
+    }
+
+    /// Stops the cleanup timer
+    private func stopCleanupTimer() {
+        cleanupTimer?.invalidate()
+        cleanupTimer = nil
     }
 }
 

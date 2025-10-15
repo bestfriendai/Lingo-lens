@@ -41,12 +41,12 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     // Frame throttling for performance
     private var isProcessingFrame = false
     private var lastDetectionTime: TimeInterval = 0
-    private let detectionInterval: TimeInterval = 0.5 // Run detection every 0.5 seconds max
+    private let detectionInterval: TimeInterval = 0.3 // Run detection every 0.3 seconds for faster response
 
     // Text recognition throttling
     private var isProcessingText = false
     private var lastTextRecognitionTime: TimeInterval = 0
-    private let textRecognitionInterval: TimeInterval = 1.0 // Run text recognition every 1 second max
+    private let textRecognitionInterval: TimeInterval = 0.5 // Run text recognition every 0.5 seconds (Google Translate-style)
 
     /// Initializes coordinator with injected dependencies
     /// - Parameters:
@@ -140,99 +140,87 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
                 }
             }
         }
-        
-        // Only process frames when detection is active and scene view exists
+
+        // Process frames when EITHER object detection OR word translation is active
         guard let arViewModel = arViewModel,
-              arViewModel.isDetectionActive,
-              let sceneView = arViewModel.sceneView else { return }
+              let sceneView = arViewModel.sceneView,
+              (arViewModel.isDetectionActive || arViewModel.isWordTranslationMode) else { return }
 
-        // Skip if already processing or not enough time has passed (throttling)
-        let detectionTime = frame.timestamp
-        guard !isProcessingFrame,
-              (detectionTime - lastDetectionTime) >= detectionInterval else {
-            return
-        }
-
-        // Mark as processing to prevent concurrent detection
-        isProcessingFrame = true
-        lastDetectionTime = detectionTime
-
-        // Safety timeout in case completion is never called
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self else { return }
-            if self.isProcessingFrame {
-                self.isProcessingFrame = false
-            }
-        }
-
-        // Only log occasionally to avoid flooding the console
-        if frame.timestamp.truncatingRemainder(dividingBy: 1.0) < 0.01 {
-            #if DEBUG
-            print("🎥 Processing AR frame at time: \(frame.timestamp)")
-            #endif
-        }
-        
-        // Get the raw camera image
+        // Get the raw camera image and orientation (needed for both modes)
         let pixelBuffer = frame.capturedImage
-        
-        // Get current device orientation to properly orient image
         let deviceOrientation = UIDevice.current.orientation
         let exifOrientation = deviceOrientation.exifOrientation
-        
-        // Convert screen ROI (the yellow bounding box) to normalized coordinates (0-1 range)
-        // Required by Vision framework for specifying the crop region
         let screenWidth = sceneView.bounds.width
         let screenHeight = sceneView.bounds.height
-        let roi = arViewModel.adjustableROI
-        
-        // Convert screen coordinates to normalized coordinates
-        // The Vision framework uses a different coordinate system (bottom-left origin)
-        // That's why we need to adjust y-coordinate with 1.0 - value
-        var nx = roi.origin.x / screenWidth
-        var ny = 1.0 - ((roi.origin.y + roi.height) / screenHeight)
-        var nw = roi.width  / screenWidth
-        var nh = roi.height / screenHeight
-        
-        // Make sure coordinates stay within valid range (0-1)
-        if nx < 0 { nx = 0 }
-        if ny < 0 { ny = 0 }
-        if nx + nw > 1 { nw = 1 - nx }
-        if ny + nh > 1 { nh = 1 - ny }
-        
-        // Create a normalized ROI rect that will be captured
-        let normalizedROI = CGRect(x: nx, y: ny, width: nw, height: nh)
-         
-        // Detach the processing from the ARFrame by using a separate method
-        processFrameData(pixelBuffer: pixelBuffer,
-                          exifOrientation: exifOrientation,
-                          normalizedROI: normalizedROI)
 
-        // Also process word translation if enabled
-        guard arViewModel.isWordTranslationMode else { return }
-
-        // Skip if already processing or not enough time has passed (throttling)
-        let textRecognitionTime = frame.timestamp
-        guard !isProcessingText,
-              (textRecognitionTime - lastTextRecognitionTime) >= textRecognitionInterval else {
-            return
-        }
-
-        // Mark as processing to prevent concurrent text recognition
-        isProcessingText = true
-        lastTextRecognitionTime = textRecognitionTime
-
-        // Safety timeout in case completion is never called
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-            guard let self = self else { return }
-            if self.isProcessingText {
-                self.isProcessingText = false
+        // OBJECT DETECTION MODE - Process detection box area
+        if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
+            // Skip if already processing or not enough time has passed
+            let detectionTime = frame.timestamp
+            guard !isProcessingFrame,
+                  (detectionTime - lastDetectionTime) >= detectionInterval else {
+                return
             }
+
+            // Mark as processing
+            isProcessingFrame = true
+            lastDetectionTime = detectionTime
+
+            // Safety timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                guard let self = self else { return }
+                if self.isProcessingFrame {
+                    self.isProcessingFrame = false
+                }
+            }
+
+            // Convert screen ROI to normalized coordinates
+            let roi = arViewModel.adjustableROI
+            var nx = roi.origin.x / screenWidth
+            var ny = 1.0 - ((roi.origin.y + roi.height) / screenHeight)
+            var nw = roi.width  / screenWidth
+            var nh = roi.height / screenHeight
+
+            // Clamp to valid range
+            if nx < 0 { nx = 0 }
+            if ny < 0 { ny = 0 }
+            if nx + nw > 1 { nw = 1 - nx }
+            if ny + nh > 1 { nh = 1 - ny }
+
+            let normalizedROI = CGRect(x: nx, y: ny, width: nw, height: nh)
+
+            // Process object detection
+            processFrameData(pixelBuffer: pixelBuffer,
+                            exifOrientation: exifOrientation,
+                            normalizedROI: normalizedROI)
         }
 
-        // Process full-frame word translation
-        processWordTranslation(pixelBuffer: pixelBuffer,
-                              exifOrientation: exifOrientation,
-                              screenSize: CGSize(width: screenWidth, height: screenHeight))
+        // WORD TRANSLATION MODE - Process full frame for text
+        if arViewModel.isWordTranslationMode {
+            // Skip if already processing or not enough time has passed
+            let textRecognitionTime = frame.timestamp
+            guard !isProcessingText,
+                  (textRecognitionTime - lastTextRecognitionTime) >= textRecognitionInterval else {
+                return
+            }
+
+            // Mark as processing
+            isProcessingText = true
+            lastTextRecognitionTime = textRecognitionTime
+
+            // Safety timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                guard let self = self else { return }
+                if self.isProcessingText {
+                    self.isProcessingText = false
+                }
+            }
+
+            // Process full-frame word translation
+            processWordTranslation(pixelBuffer: pixelBuffer,
+                                  exifOrientation: exifOrientation,
+                                  screenSize: CGSize(width: screenWidth, height: screenHeight))
+        }
     }
 
     /// Handles AR session errors by showing a user-friendly error message
