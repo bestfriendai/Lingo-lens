@@ -35,18 +35,30 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     // Object detection logic is handled by separate manager (injected for testability)
     private let objectDetectionManager: ObjectDetectionManager
 
+    // Text recognition manager for automatic word detection
+    private let textRecognitionManager: TextRecognitionManager
+
     // Frame throttling for performance
     private var isProcessingFrame = false
     private var lastDetectionTime: TimeInterval = 0
     private let detectionInterval: TimeInterval = 0.5 // Run detection every 0.5 seconds max
 
+    // Text recognition throttling
+    private var isProcessingText = false
+    private var lastTextRecognitionTime: TimeInterval = 0
+    private let textRecognitionInterval: TimeInterval = 1.0 // Run text recognition every 1 second max
+
     /// Initializes coordinator with injected dependencies
     /// - Parameters:
     ///   - arViewModel: The AR view model to coordinate with
     ///   - objectDetectionManager: Optional detection manager (defaults to new instance for backwards compatibility)
-    init(arViewModel: ARViewModel, objectDetectionManager: ObjectDetectionManager = ObjectDetectionManager()) {
+    ///   - textRecognitionManager: Optional text recognition manager
+    init(arViewModel: ARViewModel,
+         objectDetectionManager: ObjectDetectionManager = ObjectDetectionManager(),
+         textRecognitionManager: TextRecognitionManager = TextRecognitionManager()) {
         self.arViewModel = arViewModel
         self.objectDetectionManager = objectDetectionManager
+        self.textRecognitionManager = textRecognitionManager
         super.init()
     }
     
@@ -194,8 +206,35 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         processFrameData(pixelBuffer: pixelBuffer,
                           exifOrientation: exifOrientation,
                           normalizedROI: normalizedROI)
+
+        // Also process text recognition if auto-translate mode is enabled
+        guard arViewModel.isAutoTranslateMode else { return }
+
+        // Skip if already processing or not enough time has passed (throttling)
+        let textRecognitionTime = frame.timestamp
+        guard !isProcessingText,
+              (textRecognitionTime - lastTextRecognitionTime) >= textRecognitionInterval else {
+            return
+        }
+
+        // Mark as processing to prevent concurrent text recognition
+        isProcessingText = true
+        lastTextRecognitionTime = textRecognitionTime
+
+        // Safety timeout in case completion is never called
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            guard let self = self else { return }
+            if self.isProcessingText {
+                self.isProcessingText = false
+            }
+        }
+
+        // Process text recognition
+        processTextRecognition(pixelBuffer: pixelBuffer,
+                              exifOrientation: exifOrientation,
+                              normalizedROI: normalizedROI)
     }
-    
+
     /// Handles AR session errors by showing a user-friendly error message
     func session(_ session: ARSession, didFailWithError error: Error) {
         print("❌ AR session error: \(error.localizedDescription)")
@@ -256,7 +295,58 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
             }
         }
     }
-    
+
+    /// Handles text recognition from camera frames for automatic translation
+    private func processTextRecognition(pixelBuffer: CVPixelBuffer,
+                                       exifOrientation: CGImagePropertyOrientation,
+                                       normalizedROI: CGRect) {
+
+        // Safety timeout to prevent stuck text recognition state
+        let recognitionStartTime = Date()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            guard let self = self else { return }
+            if self.isProcessingText && Date().timeIntervalSince(recognitionStartTime) >= 2.0 {
+                SecureLogger.logError("Text recognition timeout - resetting isProcessingText")
+                self.isProcessingText = false
+            }
+        }
+
+        // Send the frame to text recognition manager
+        textRecognitionManager.recognizeText(
+            pixelBuffer: pixelBuffer,
+            exifOrientation: exifOrientation,
+            normalizedROI: normalizedROI
+        ) { [weak self] detectedWords in
+
+            // Update the UI with detected words on main thread using weak self
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                guard let arViewModel = self.arViewModel else { return }
+
+                // Update detected words
+                arViewModel.detectedWords = detectedWords
+
+                // Auto-translate the first confident word
+                if let firstWord = detectedWords.first(where: { $0.isConfident }) {
+                    self.autoTranslateWord(firstWord.text, arViewModel: arViewModel)
+                } else {
+                    arViewModel.autoTranslatedText = ""
+                }
+
+                // Reset processing flag to allow next recognition
+                self.isProcessingText = false
+            }
+        }
+    }
+
+    /// Automatically translates a detected word
+    private func autoTranslateWord(_ word: String, arViewModel: ARViewModel) {
+        // Store the word to be translated for the view to handle via translationTask
+        DispatchQueue.main.async {
+            arViewModel.detectedObjectName = word
+        }
+    }
+
     /// Updates the loading message only if it's different from current message
     /// Prevents unnecessary UI updates when message hasn't changed
     private func updateLoadingMessage(_ message: String) {

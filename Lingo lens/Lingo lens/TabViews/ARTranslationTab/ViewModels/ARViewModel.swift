@@ -20,15 +20,24 @@ class ARViewModel: ObservableObject {
     }
     
     // MARK: - Published States
-    
+
     // Current state of the AR session (active/paused)
     @Published var sessionState: ARSessionState = .active
-    
+
     // Controls whether object detection is currently running
     @Published var isDetectionActive = false
-    
+
     // Name of object currently detected within the ROI
     @Published var detectedObjectName: String = ""
+
+    // Controls automatic text recognition and translation mode
+    @Published var isAutoTranslateMode = false
+
+    // Currently detected words for automatic translation
+    @Published var detectedWords: [DetectedWord] = []
+
+    // Automatically translated text for current detected word
+    @Published var autoTranslatedText: String = ""
     
     // The yellow box that defines where to look for objects
     @Published var adjustableROI: CGRect = .zero

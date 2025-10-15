@@ -24,14 +24,41 @@ struct ControlBar: View {
     @State private var downloadConfig: TranslationSession.Configuration? = nil
     
     var body: some View {
-        HStack {
-            settingsButton
-            Spacer()
-            detectionToggleButton
-            Spacer()
-            addAnnotationButton
+        VStack(spacing: 8) {
+            // Auto-translate mode toggle
+            HStack {
+                Text("Auto-Translate Mode")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white)
+
+                Toggle("", isOn: $arViewModel.isAutoTranslateMode)
+                    .labelsHidden()
+                    .onChange(of: arViewModel.isAutoTranslateMode) { newValue in
+                        if newValue {
+                            // When enabling auto-translate, prepare language
+                            checkLanguageAndStartAutoTranslate()
+                        } else {
+                            // When disabling, stop detection
+                            arViewModel.isDetectionActive = false
+                            arViewModel.detectedObjectName = ""
+                            arViewModel.autoTranslatedText = ""
+                        }
+                    }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            .background(Color.black.opacity(0.6))
+            .cornerRadius(10)
+
+            HStack {
+                settingsButton
+                Spacer()
+                detectionToggleButton
+                Spacer()
+                addAnnotationButton
+            }
         }
-        
+
         // Sheet for downloading languages when needed
         .sheet(isPresented: $showLanguageDownloadPrompt) {
             LanguageDownloadView(
@@ -42,7 +69,7 @@ struct ControlBar: View {
                 }
             )
         }
-        
+
         // Hidden view that handles language preparation
         .background(translationTaskBackground)
     }
@@ -227,6 +254,29 @@ struct ControlBar: View {
                 if isDownloaded {
                     // If language already downloaded, prepare it
                     prepareLanguageAndStartDetection()
+                } else {
+                    showLanguageDownloadPrompt = true
+                }
+            }
+        }
+    }
+
+    // Checks language and starts auto-translate mode
+    private func checkLanguageAndStartAutoTranslate() {
+        isCheckingLanguage = true
+
+        Task {
+            let isDownloaded = await translationService.isLanguageDownloaded(
+                language: arViewModel.selectedLanguage
+            )
+
+            await MainActor.run {
+                isCheckingLanguage = false
+
+                if isDownloaded {
+                    // If language already downloaded, start auto-translate immediately
+                    print("🔍 Starting auto-translate mode with language: \(arViewModel.selectedLanguage.shortName())")
+                    arViewModel.isDetectionActive = true
                 } else {
                     showLanguageDownloadPrompt = true
                 }

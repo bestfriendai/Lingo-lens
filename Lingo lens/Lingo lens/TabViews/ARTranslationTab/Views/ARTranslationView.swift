@@ -240,13 +240,19 @@ struct ARTranslationView: View {
             }
             
             VStack {
-                
+
                 // Top section - shows detection status
-                if arViewModel.isDetectionActive {
+                if arViewModel.isDetectionActive && !arViewModel.isAutoTranslateMode {
                     DetectionLabel(detectedObjectName: arViewModel.detectedObjectName)
                         .padding(.top, 10)
                 }
-                
+
+                // Auto-translate overlay
+                if arViewModel.isAutoTranslateMode && arViewModel.isDetectionActive {
+                    autoTranslateOverlay
+                        .padding(.top, 10)
+                }
+
                 // Error message when annotation placement fails
                 if arViewModel.showPlacementError {
                     Text(arViewModel.placementErrorMessage)
@@ -260,7 +266,7 @@ struct ARTranslationView: View {
                         .zIndex(1)
                         .accessibilityAddTraits(.updatesFrequently)
                 }
-                
+
                 Spacer()
                 
                 // Bottom control bar
@@ -383,6 +389,62 @@ struct ARTranslationView: View {
         }
     }
     
+    /// Overlay showing auto-translated text
+    private var autoTranslateOverlay: some View {
+        VStack(spacing: 12) {
+            // Detected words
+            if let firstWord = arViewModel.detectedWords.first {
+                VStack(spacing: 4) {
+                    Text("Detected:")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+
+                    Text(firstWord.text)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.blue.opacity(0.8))
+                .cornerRadius(12)
+
+                // Translation
+                if !arViewModel.autoTranslatedText.isEmpty {
+                    VStack(spacing: 4) {
+                        Text("Translation:")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+
+                        Text(arViewModel.autoTranslatedText)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.green.opacity(0.8))
+                    .cornerRadius(12)
+                }
+            } else {
+                // Scanning state
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .tint(.white)
+                    Text("Scanning for words...")
+                        .font(.callout)
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Color.orange.opacity(0.8))
+                .cornerRadius(12)
+            }
+        }
+        .padding(.horizontal)
+    }
+
     /// View that handles the draggable detection box
     private var boundingBoxView: some View {
         GeometryReader { geo in
