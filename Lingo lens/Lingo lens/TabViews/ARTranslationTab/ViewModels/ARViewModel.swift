@@ -192,36 +192,62 @@ class ARViewModel: ObservableObject {
         guard let sceneView = sceneView else { return }
 
         // Don't resume if already active
-        guard sessionState != .active else { return }
+        guard sessionState != .active else {
+            #if DEBUG
+            print("⚠️ AR session already active - skipping resume")
+            #endif
+            return
+        }
+
+        // Prevent multiple resume calls
+        guard !isARSessionLoading else {
+            #if DEBUG
+            print("⚠️ AR session already resuming - skipping")
+            #endif
+            return
+        }
 
         // Reset AR loading state
         isARSessionLoading = true
 
-        // Ensure session is paused before restarting
+        // Ensure session is properly paused first
         if sessionState != .paused {
             sceneView.session.pause()
             sessionState = .paused
+            // Give iOS time to fully pause the session
+            Thread.sleep(forTimeInterval: 0.1)
         }
-        
+
         // Small delay before restarting for better stability
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self = self else { return }
+            guard let sceneView = self.sceneView else { return }
+
+            // Double check we're still supposed to resume
+            guard self.isARSessionLoading else { return }
+
             sceneView.backgroundColor = .black
-            
-            // Configure AR with plane detection and environment texturing
+
+            // Configure AR with optimized settings for device
             let configuration = ARWorldTrackingConfiguration()
             configuration.planeDetection = [.horizontal, .vertical]
-            configuration.environmentTexturing = .automatic
-            
-            // Enable mesh reconstruction if device supports it (LiDAR)
+
+            // Lighter configuration for better performance
             if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
+                // Use mesh only if device has LiDAR
                 configuration.sceneReconstruction = .mesh
+            } else {
+                // Disable environment texturing on older devices for performance
+                configuration.environmentTexturing = .none
             }
-            
-            // Smooth transition when restarting session
-            UIView.transition(with: sceneView, duration: 0.3, options: .transitionCrossDissolve) {
-                sceneView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors, .resetSceneReconstruction])
-            }
-            
+
+            // Less aggressive reset for smoother experience
+            // Don't reset tracking if we're just coming back from tab switch
+            let runOptions: ARSession.RunOptions = [.removeExistingAnchors]
+
+            // Run session without UI transition to avoid conflicts
+            sceneView.session.run(configuration, options: runOptions)
+
             self.sessionState = .active
         }
     }
