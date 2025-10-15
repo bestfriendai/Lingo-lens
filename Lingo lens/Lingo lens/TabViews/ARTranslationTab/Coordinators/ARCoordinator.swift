@@ -331,12 +331,16 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         
         // Show translation sheet for tapped annotation
         if let closest = closestAnnotation {
+            #if DEBUG
             SecureLogger.log("Tapped on annotation", level: .info)
+            #endif
             arViewModel.selectedAnnotationText = closest.text
             arViewModel.isShowingAnnotationDetail = true
             arViewModel.isDetectionActive = false
         } else {
+            #if DEBUG
             SecureLogger.log("No annotation found at tap location", level: .info)
+            #endif
         }
 
     }
@@ -384,15 +388,19 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         
         // Show delete confirmation for the annotation
         if let closest = closestAnnotation {
+            #if DEBUG
             SecureLogger.log("Long-pressed on annotation at index \(closest.index)", level: .info)
+            #endif
 
             arViewModel.isDetectionActive = false
             arViewModel.detectedObjectName = ""
-            
+
             let textToShow = closest.text
             arViewModel.showDeleteAnnotationAlert(index: closest.index, objectName: textToShow)
         } else {
+            #if DEBUG
             SecureLogger.log("No annotation found at long press location", level: .info)
+            #endif
         }
     }
 

@@ -80,16 +80,20 @@ class ObjectDetectionManager {
                 return
             }
 
+            #if DEBUG
             SecureLogger.log("Starting object detection", level: .info)
-            
+            #endif
+
             // Create cache key from ROI for detection result caching
             let cacheKey = String(format: "%.3f_%.3f_%.3f_%.3f",
                                 normalizedROI.origin.x, normalizedROI.origin.y,
                                 normalizedROI.width, normalizedROI.height) as NSString
-            
+
             // Check detection result cache first
             if let cachedResult = self.detectionResultCache.object(forKey: cacheKey) {
+                #if DEBUG
                 SecureLogger.log("Using cached detection result", level: .info)
+                #endif
                 completion(cachedResult as String)
                 return
             }
@@ -115,7 +119,9 @@ class ObjectDetectionManager {
             var ciImage: CIImage
             if let cachedImage = self.imageCache.object(forKey: imageCacheKey) {
                 ciImage = cachedImage
+                #if DEBUG
                 SecureLogger.log("Using cached processed image", level: .info)
+                #endif
             } else {
                 // Convert pixel buffer to CIImage and fix orientation
                 ciImage = CIImage(cvPixelBuffer: pixelBuffer)
@@ -192,7 +198,9 @@ class ObjectDetectionManager {
                 return
             }
             
+            #if DEBUG
             SecureLogger.log("Object detected with confidence: \(best.confidence)", level: .info)
+            #endif
             
             // Cache the detection result
             self.detectionResultCache.setObject(best.identifier as NSString, forKey: cacheKey)
