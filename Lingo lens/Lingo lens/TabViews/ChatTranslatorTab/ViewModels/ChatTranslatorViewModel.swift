@@ -303,17 +303,8 @@ class ChatTranslatorViewModel: ObservableObject {
             notificationGenerator.notificationOccurred(.error)
         }
 
-        switch error {
-        case .sessionNotReady:
-            errorMessage = "Translation isn't ready yet. Please wait a moment and try again."
-        case .timeout:
-            errorMessage = "Translation is taking too long. Check your internet connection."
-        case .networkError:
-            errorMessage = "No internet connection. Please connect and try again."
-        case .unknown(let message):
-            errorMessage = "Translation failed: \(message)"
-        }
-
+        // Use the error message from AppError protocol
+        errorMessage = error.message
         showError = true
     }
 
@@ -469,24 +460,5 @@ struct PendingTranslation: Identifiable {
 }
 
 // MARK: - Translation Error Types
-
-enum TranslationError: LocalizedError {
-    case sessionNotReady
-    case timeout
-    case networkError
-    case unknown(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .sessionNotReady:
-            return "Translation session not ready"
-        case .timeout:
-            return "Translation timed out"
-        case .networkError:
-            return "Network connection failed"
-        case .unknown(let message):
-            return message
-        }
-    }
-}
+// Note: TranslationError is defined in Core/Errors/AppError.swift
 

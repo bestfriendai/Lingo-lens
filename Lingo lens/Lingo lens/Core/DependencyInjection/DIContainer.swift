@@ -38,16 +38,19 @@ final class DIContainer: ObservableObject {
     // MARK: - Factory Methods
 
     /// Creates a new ChatTranslatorViewModel with injected dependencies
+    @MainActor
     func makeChatTranslatorViewModel() -> ChatTranslatorViewModel {
         return ChatTranslatorViewModel(translationService: translationService)
     }
 
     /// Creates a new ARViewModel with injected dependencies
+    @MainActor
     func makeARViewModel() -> ARViewModel {
         return ARViewModel()
     }
 
     /// Creates a new ARCoordinator with injected dependencies
+    @MainActor
     func makeARCoordinator(arViewModel: ARViewModel) -> ARCoordinator {
         return ARCoordinator(arViewModel: arViewModel, objectDetectionManager: objectDetectionManager)
     }
