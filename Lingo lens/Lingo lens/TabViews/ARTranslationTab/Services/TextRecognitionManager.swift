@@ -138,7 +138,6 @@ class TextRecognitionManager {
             // Use .fast instead of .accurate for real-time translation (100ms vs 500ms)
             request.recognitionLevel = .fast
             request.usesLanguageCorrection = false  // Disable for speed
-            request.usesCPUOnly = true  // Leave GPU for ARKit rendering
             request.recognitionLanguages = self.recognitionLanguages
 
             // NO region of interest - process entire frame
