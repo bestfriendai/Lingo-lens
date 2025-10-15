@@ -81,15 +81,14 @@ struct PersistenceController {
         let storeDirectory = NSPersistentContainer.defaultDirectoryURL()
 
         #if DEBUG
-        // Log the store directory path (debug only)
-        SecureLogger.log("Core Data store directory: \(storeDirectory.path)", level: .debug)
+        print("📂 Core Data store directory: \(storeDirectory.path)")
         #endif
 
         // For previews, use an in-memory store that disappears when the app closes
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
             #if DEBUG
-            SecureLogger.log("Using in-memory Core Data store at: /dev/null", level: .debug)
+            print("📂 Using in-memory Core Data store at: /dev/null")
             #endif
         } else {
             // Enable file protection for persistent store
@@ -100,11 +99,10 @@ struct PersistenceController {
                     FileProtectionType.completeUntilFirstUserAuthentication as NSObject,
                     forKey: NSPersistentStoreFileProtectionKey
                 )
-
                 #if DEBUG
-                SecureLogger.log("Core Data file protection enabled", level: .debug)
+                print("🔒 Core Data file protection: completeUntilFirstUserAuthentication")
                 if let storeURL = storeDescription.url {
-                    SecureLogger.log("Core Data store file: \(storeURL.path)", level: .debug)
+                    print("📂 Core Data store file: \(storeURL.path)")
                 }
                 #endif
             }
@@ -159,3 +157,4 @@ struct PersistenceController {
         }
     }
 }
+

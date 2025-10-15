@@ -251,7 +251,7 @@ struct SavedWords: View {
                 }
                 
             } catch {
-                print("❌ Failed to load language filters: \(error.localizedDescription)")
+                SecureLogger.logError("Failed to load language filters", error: error)
 
                 // Handle any errors during loading
                 await MainActor.run {

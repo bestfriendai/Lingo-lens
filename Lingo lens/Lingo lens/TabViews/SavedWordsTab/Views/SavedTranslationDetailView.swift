@@ -147,7 +147,7 @@ struct SavedTranslationDetailView: View {
                             
                             // Normal delete button
                             Button(action: {
-                                print("👆 Button pressed: Show delete confirmation for translation")
+                                SecureLogger.log("Delete button pressed", level: .info)
                                 showDeleteConfirmation = true
                             }) {
                                 Label("Delete", systemImage: "trash")
@@ -212,7 +212,7 @@ struct SavedTranslationDetailView: View {
     /// Triggers text-to-speech to pronounce the translated text
     /// Uses the target language's voice settings
     private func speakTranslation() {
-        print("👆 Button pressed: Speak translation \"\(translation.translatedText ?? "")\" in language: \(translation.languageCode ?? "unknown")")
+        SecureLogger.log("Speak translation button pressed", level: .info)
         SpeechManager.shared.speak(
             text: translation.translatedText ?? "",
             languageCode: translation.languageCode ?? "en-US"
@@ -222,7 +222,7 @@ struct SavedTranslationDetailView: View {
     /// Deletes the current translation from Core Data
     /// Handles error states and dismisses view on success
     private func deleteTranslation() {
-        print("🗑️ Deleting translation: \(translation.originalText ?? "unknown") -> \(translation.translatedText ?? "unknown")")
+        SecureLogger.log("Deleting translation", level: .info)
         isDeleting = true
         
         Task {
@@ -230,13 +230,13 @@ struct SavedTranslationDetailView: View {
                 
                 // Delete on main thread since it affects UI
                 await MainActor.run {
-                    print("🗑️ Removing translation from context: ID \(translation.id?.uuidString ?? "unknown")")
+                    SecureLogger.log("Removing translation from context", level: .info)
                     viewContext.delete(translation)
                 }
                 
                 // Save context to persist the deletion
                 try viewContext.save()
-                print("✅ Translation deleted and context saved")
+                SecureLogger.log("Translation deleted successfully", level: .info)
                 
                 // Return to list view on successful delete
                 await MainActor.run {
@@ -244,7 +244,7 @@ struct SavedTranslationDetailView: View {
                     dismiss()
                 }
             } catch {
-                print("❌ Failed to delete translation: \(error.localizedDescription)")
+                SecureLogger.logError("Failed to delete translation", error: error)
 
                 // Show error if deletion fails
                 await MainActor.run {

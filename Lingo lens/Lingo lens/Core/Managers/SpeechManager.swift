@@ -7,10 +7,11 @@
 
 import AVFoundation
 import SwiftUI
+import Combine
 
 /// Singleton manager for handling all speech synthesis throughout the app
 /// Prevents lag by maintaining a single instance of AVSpeechSynthesizer
-class SpeechManager: NSObject, ObservableObject {
+class SpeechManager: NSObject, ObservableObject, SpeechManaging {
     
     // Shared instance for whole app to use
     static let shared = SpeechManager()
@@ -22,6 +23,16 @@ class SpeechManager: NSObject, ObservableObject {
     
     // True while actively speaking text
     @Published var isSpeaking = false
+    
+    // MARK: - SpeechManaging Protocol
+    
+    var isLoadingPublisher: AnyPublisher<Bool, Never> {
+        $isLoading.eraseToAnyPublisher()
+    }
+    
+    var isSpeakingPublisher: AnyPublisher<Bool, Never> {
+        $isSpeaking.eraseToAnyPublisher()
+    }
     
     // MARK: - Private Properties
 

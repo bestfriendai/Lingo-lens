@@ -140,9 +140,19 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         isProcessingFrame = true
         lastDetectionTime = detectionTime
 
+        // Safety timeout in case completion is never called
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            guard let self = self else { return }
+            if self.isProcessingFrame {
+                self.isProcessingFrame = false
+            }
+        }
+
         // Only log occasionally to avoid flooding the console
         if frame.timestamp.truncatingRemainder(dividingBy: 1.0) < 0.01 {
+            #if DEBUG
             print("🎥 Processing AR frame at time: \(frame.timestamp)")
+            #endif
         }
         
         // Get the raw camera image
@@ -316,12 +326,12 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         
         // Show translation sheet for tapped annotation
         if let closest = closestAnnotation {
-            print("✅ Tapped on annotation: \"\(closest.text)\"")
+            SecureLogger.log("Tapped on annotation", level: .info)
             arViewModel.selectedAnnotationText = closest.text
             arViewModel.isShowingAnnotationDetail = true
             arViewModel.isDetectionActive = false
         } else {
-            print("ℹ️ No annotation found at tap location")
+            SecureLogger.log("No annotation found at tap location", level: .info)
         }
 
     }
@@ -369,7 +379,7 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         
         // Show delete confirmation for the annotation
         if let closest = closestAnnotation {
-            print("✅ Long-pressed on annotation: \"\(closest.text)\" at index \(closest.index)")
+            SecureLogger.log("Long-pressed on annotation at index \(closest.index)", level: .info)
 
             arViewModel.isDetectionActive = false
             arViewModel.detectedObjectName = ""
@@ -377,8 +387,9 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
             let textToShow = closest.text
             arViewModel.showDeleteAnnotationAlert(index: closest.index, objectName: textToShow)
         } else {
-            print("ℹ️ No annotation found at long press location")
+            SecureLogger.log("No annotation found at long press location", level: .info)
         }
     }
 
 }
+

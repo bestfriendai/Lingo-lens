@@ -27,17 +27,28 @@ class ObjectDetectionManager {
     // Small margin to shrink the detection box slightly for better results
     private let insideMargin: CGFloat = 4
 
+    // Image cache for improved performance on repeated detections
+    private let imageCache = NSCache<NSString, CIImage>()
+    private let detectionResultCache = NSCache<NSString, NSString>()
+
     // MARK: - Setup
 
     /// Sets up the ML model when manager is created
     /// Loads FastViTMA36F16 model for object recognition
     init() {
+        // Configure image cache
+        imageCache.countLimit = AppConstants.Performance.imageCacheSize
+        imageCache.totalCostLimit = 50 * 1024 * 1024  // 50MB max
+        
+        // Configure result cache
+        detectionResultCache.countLimit = AppConstants.Performance.imageCacheSize * 2
+        
         do {
             // Load the model from the app bundle
             let model = try FastViTMA36F16(configuration: MLModelConfiguration()).model
             visionModel = try VNCoreMLModel(for: model)
         } catch {
-            print("Failed to load object detection model: \(error.localizedDescription)")
+            SecureLogger.logError("Failed to load object detection model", error: error)
             
             // Alert user about model loading failure
             ARErrorManager.shared.showError(
@@ -69,11 +80,23 @@ class ObjectDetectionManager {
                 return
             }
 
-            print("🔍 Starting object detection with ROI: \(normalizedROI)")
+            SecureLogger.log("Starting object detection", level: .info)
+            
+            // Create cache key from ROI for detection result caching
+            let cacheKey = String(format: "%.3f_%.3f_%.3f_%.3f",
+                                normalizedROI.origin.x, normalizedROI.origin.y,
+                                normalizedROI.width, normalizedROI.height) as NSString
+            
+            // Check detection result cache first
+            if let cachedResult = self.detectionResultCache.object(forKey: cacheKey) {
+                SecureLogger.log("Using cached detection result", level: .info)
+                completion(cachedResult as String)
+                return
+            }
 
             // Make sure we have the ML model loaded
             guard let visionModel = self.visionModel else {
-                print("⚠️ Object detection model not available")
+                SecureLogger.logError("Object detection model not available")
                 DispatchQueue.main.async {
                     ARErrorManager.shared.showError(
                         message: "Object detection model is not available. Please restart the app.",
@@ -84,15 +107,28 @@ class ObjectDetectionManager {
                 return
             }
 
-            // Convert pixel buffer to CIImage and fix orientation
-            var ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-                .oriented(forExifOrientation: exifOrientation.numericValue)
+            // Check image cache first
+            let imageCacheKey = String(format: "img_%.3f_%.3f_%.3f_%.3f",
+                                      normalizedROI.origin.x, normalizedROI.origin.y,
+                                      normalizedROI.width, normalizedROI.height) as NSString
+            
+            var ciImage: CIImage
+            if let cachedImage = self.imageCache.object(forKey: imageCacheKey) {
+                ciImage = cachedImage
+                SecureLogger.log("Using cached processed image", level: .info)
+            } else {
+                // Convert pixel buffer to CIImage and fix orientation
+                ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+                    .oriented(forExifOrientation: exifOrientation.numericValue)
+            }
         
         // Convert normalized coordinates (0-1) to actual pixel coordinates
         let fullWidth = ciImage.extent.width
         let fullHeight = ciImage.extent.height
         
-        print("📐 Image dimensions: \(fullWidth) x \(fullHeight), Orientation: \(exifOrientation)")
+        #if DEBUG
+        SecureLogger.log("Image dimensions: \(fullWidth) x \(fullHeight)", level: .info)
+        #endif
         
         let cropX = normalizedROI.origin.x * fullWidth
         let cropY = normalizedROI.origin.y * fullHeight
@@ -120,6 +156,9 @@ class ObjectDetectionManager {
         // Crop the image to only the region inside the detection box
         ciImage = ciImage.cropped(to: cropRect)
         
+        // Cache the processed image for future detections
+        self.imageCache.setObject(ciImage, forKey: imageCacheKey)
+        
         // Convert CIImage to CGImage for Vision framework
         guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else {
             SecureLogger.logError("Failed to create CGImage from CIImage for object detection")
@@ -134,9 +173,11 @@ class ObjectDetectionManager {
         }
         
         // Set up the ML request to detect objects in the image
-        let request = VNCoreMLRequest(model: visionModel) { request, error in
+        let request = VNCoreMLRequest(model: visionModel) { [weak self] request, error in
+            guard let self = self else { return }
+            
             if let error = error {
-                print("❌ Vision request failed: \(error.localizedDescription)")
+                SecureLogger.logError("Vision request failed", error: error)
                 completion(nil)
                 return
             }
@@ -145,13 +186,17 @@ class ObjectDetectionManager {
             // Only return it if confidence is above 50%
             guard let results = request.results as? [VNClassificationObservation],
                   let best = results.first,
-                  best.confidence > 0.5 else {
-                print("ℹ️ No object detected with confidence > 0.5")
+                  best.confidence > AppConstants.AR.confidenceThreshold else {
+                SecureLogger.log("No object detected with sufficient confidence", level: .info)
                 completion(nil)
                 return
             }
             
-            print("✅ Object detected: \"\(best.identifier)\" with confidence: \(best.confidence)")
+            SecureLogger.log("Object detected with confidence: \(best.confidence)", level: .info)
+            
+            // Cache the detection result
+            self.detectionResultCache.setObject(best.identifier as NSString, forKey: cacheKey)
+            
             completion(best.identifier)
         }
         
@@ -163,11 +208,13 @@ class ObjectDetectionManager {
             do {
                 try handler.perform([request])
             } catch {
-                print("Vision request failed: \(error.localizedDescription)")
-                ARErrorManager.shared.showError(
-                    message: "Vision processing failed: \(error.localizedDescription)",
-                    retryAction: nil
-                )
+                SecureLogger.logError("Vision request failed", error: error)
+                DispatchQueue.main.async {
+                    ARErrorManager.shared.showError(
+                        message: "Vision processing failed. Please try again.",
+                        retryAction: nil
+                    )
+                }
                 completion(nil)
             }
         } // End of processingQueue.async

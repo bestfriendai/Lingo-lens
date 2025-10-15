@@ -389,7 +389,7 @@ class ARViewModel: ObservableObject {
         scene.addChild(containerNode)
         
         // Add chevron icon to indicate tappable
-        let chevron = SKLabelNode(fontNamed: "HelveticaNeue-Bold")
+        let chevron = SKLabelNode(fontNamed: "Helvetica-Bold")
         chevron.text = "›"
         chevron.fontSize = 36
         chevron.fontColor = .gray
@@ -493,3 +493,4 @@ class ARViewModel: ObservableObject {
         return lines.reversed()
     }
 }
+

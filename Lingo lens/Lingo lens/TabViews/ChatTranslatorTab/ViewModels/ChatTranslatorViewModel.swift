@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import Translation
+import CoreHaptics
 
 /// ViewModel managing chat translator state and translation logic
 @MainActor
@@ -75,6 +76,7 @@ class ChatTranslatorViewModel: ObservableObject {
     private let impactGenerator = UIImpactFeedbackGenerator(style: .light)
     private let selectionGenerator = UISelectionFeedbackGenerator()
     private let notificationGenerator = UINotificationFeedbackGenerator()
+    private let hapticsAvailable = CHHapticEngine.capabilitiesForHardware().supportsHaptics
 
     // MARK: - Initialization
 
@@ -98,9 +100,11 @@ class ChatTranslatorViewModel: ObservableObject {
 
         // Defer haptic preparation to avoid blocking initialization
         Task { @MainActor in
-            impactGenerator.prepare()
-            selectionGenerator.prepare()
-            notificationGenerator.prepare()
+            if hapticsAvailable {
+                impactGenerator.prepare()
+                selectionGenerator.prepare()
+                notificationGenerator.prepare()
+            }
         }
     }
 
@@ -132,10 +136,12 @@ class ChatTranslatorViewModel: ObservableObject {
 
     /// Swaps source and target languages with animation
     func swapLanguages() {
-        print("🔄 Swapping languages")
+        SecureLogger.log("Swapping languages", level: .info)
 
         // Haptic feedback using prepared generator
-        impactGenerator.impactOccurred()
+        if hapticsAvailable {
+            impactGenerator.impactOccurred()
+        }
 
         // Swap with animation
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -147,20 +153,24 @@ class ChatTranslatorViewModel: ObservableObject {
 
     /// Updates source language and speech recognition
     func updateSourceLanguage(_ language: AvailableLanguage) {
-        print("🌐 Updating source language to: \(language.localizedName())")
+        SecureLogger.log("Updating source language", level: .info)
 
         // Haptic feedback using prepared generator
-        selectionGenerator.selectionChanged()
+        if hapticsAvailable {
+            selectionGenerator.selectionChanged()
+        }
 
         sourceLanguage = language
     }
 
     /// Updates target language
     func updateTargetLanguage(_ language: AvailableLanguage) {
-        print("🌐 Updating target language to: \(language.localizedName())")
+        SecureLogger.log("Updating target language", level: .info)
 
         // Haptic feedback using prepared generator
-        selectionGenerator.selectionChanged()
+        if hapticsAvailable {
+            selectionGenerator.selectionChanged()
+        }
 
         targetLanguage = language
     }
@@ -246,6 +256,9 @@ class ChatTranslatorViewModel: ObservableObject {
         translationCache[cacheKey] = translatedText
 
         // Add message with haptic feedback
+        if hapticsAvailable {
+            notificationGenerator.notificationOccurred(.success)
+        }
         addMessage(original: request.text, translated: translatedText, isFromSpeech: request.isFromSpeech)
 
         // Clear pending request
@@ -264,10 +277,19 @@ class ChatTranslatorViewModel: ObservableObject {
         )
 
         // Haptic feedback for successful translation using prepared generator
-        notificationGenerator.notificationOccurred(.success)
+        if hapticsAvailable {
+            notificationGenerator.notificationOccurred(.success)
+        }
 
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             messages.append(message)
+        }
+
+        // Message pagination - archive old messages if limit exceeded
+        if messages.count > AppConstants.UI.messageMaxVisible {
+            SecureLogger.log("Archiving old messages to maintain performance", level: .info)
+            // Keep only the most recent messages
+            messages = Array(messages.suffix(AppConstants.UI.messageMaxVisible))
         }
 
         // Clear input text
@@ -277,7 +299,9 @@ class ChatTranslatorViewModel: ObservableObject {
     /// Handles translation errors with user-friendly messages
     func handleTranslationError(_ error: TranslationError) {
         // Haptic feedback for error using prepared generator
-        notificationGenerator.notificationOccurred(.error)
+        if hapticsAvailable {
+            notificationGenerator.notificationOccurred(.error)
+        }
 
         switch error {
         case .sessionNotReady:
@@ -297,10 +321,12 @@ class ChatTranslatorViewModel: ObservableObject {
 
     /// Starts speech recognition with better error handling
     func startSpeechRecognition() {
-        print("🎤 Starting speech recognition")
+        SecureLogger.log("Starting speech recognition", level: .info)
 
         // Haptic feedback using prepared generator
-        impactGenerator.impactOccurred()
+        if hapticsAvailable {
+            impactGenerator.impactOccurred()
+        }
 
         // Check authorization
         if speechRecognitionManager.authorizationStatus != .authorized {
@@ -322,21 +348,25 @@ class ChatTranslatorViewModel: ObservableObject {
         do {
             try speechRecognitionManager.startRecording()
         } catch {
-            print("❌ Failed to start speech recognition: \(error.localizedDescription)")
+            SecureLogger.logError("Failed to start speech recognition", error: error)
             errorMessage = "Couldn't start recording. Please try again."
             showError = true
 
             // Error haptic using prepared generator
-            notificationGenerator.notificationOccurred(.error)
+            if hapticsAvailable {
+                notificationGenerator.notificationOccurred(.error)
+            }
         }
     }
 
     /// Stops speech recognition and translates the result
     func stopSpeechRecognition() async {
-        print("🛑 Stopping speech recognition")
+        SecureLogger.log("Stopping speech recognition", level: .info)
 
         // Haptic feedback using prepared generator
-        impactGenerator.impactOccurred()
+        if hapticsAvailable {
+            impactGenerator.impactOccurred()
+        }
 
         speechRecognitionManager.stopRecording()
 
@@ -349,7 +379,7 @@ class ChatTranslatorViewModel: ObservableObject {
             translateText(recognizedText, isFromSpeech: true)
             speechRecognitionManager.clearText()
         } else {
-            print("⚠️ No speech recognized")
+            SecureLogger.log("No speech recognized", level: .warning)
             // No error - just silent failure for better UX
         }
     }
@@ -358,20 +388,24 @@ class ChatTranslatorViewModel: ObservableObject {
 
     /// Plays audio for original text
     func speakOriginalText(of message: ChatMessage) {
-        print("🔊 Speaking original text: \(message.originalText)")
+        SecureLogger.log("Speaking original text", level: .info)
 
         // Haptic feedback using prepared generator
-        impactGenerator.impactOccurred()
+        if hapticsAvailable {
+            impactGenerator.impactOccurred()
+        }
 
         speechManager.speak(text: message.originalText, languageCode: message.sourceLanguage.shortName())
     }
 
     /// Plays audio for translated text
     func speakTranslatedText(of message: ChatMessage) {
-        print("🔊 Speaking translated text: \(message.translatedText)")
+        SecureLogger.log("Speaking translated text", level: .info)
 
         // Haptic feedback using prepared generator
-        impactGenerator.impactOccurred()
+        if hapticsAvailable {
+            impactGenerator.impactOccurred()
+        }
 
         speechManager.speak(text: message.translatedText, languageCode: message.targetLanguage.shortName())
     }
@@ -380,10 +414,12 @@ class ChatTranslatorViewModel: ObservableObject {
 
     /// Clears all messages with confirmation
     func clearMessages() {
-        print("🗑️ Clearing all messages")
+        SecureLogger.log("Clearing all messages", level: .info)
 
         // Haptic feedback using prepared generator
-        notificationGenerator.notificationOccurred(.warning)
+        if hapticsAvailable {
+            notificationGenerator.notificationOccurred(.warning)
+        }
 
         withAnimation(.easeOut(duration: 0.25)) {
             messages.removeAll()
@@ -395,10 +431,12 @@ class ChatTranslatorViewModel: ObservableObject {
 
     /// Deletes a specific message
     func deleteMessage(_ message: ChatMessage) {
-        print("🗑️ Deleting message: \(message.id)")
+        SecureLogger.log("Deleting message", level: .info)
 
         // Haptic feedback using prepared generator
-        impactGenerator.impactOccurred()
+        if hapticsAvailable {
+            impactGenerator.impactOccurred()
+        }
 
         withAnimation(.easeOut(duration: 0.2)) {
             messages.removeAll { $0.id == message.id }
