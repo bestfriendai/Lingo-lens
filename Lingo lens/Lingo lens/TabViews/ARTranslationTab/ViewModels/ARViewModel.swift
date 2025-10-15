@@ -31,8 +31,8 @@ class ARViewModel: ObservableObject {
     // Name of object currently detected within the ROI
     @Published var detectedObjectName: String = ""
 
-    // Controls automatic text recognition and translation mode
-    @Published var isAutoTranslateMode = false
+    // Controls automatic text recognition and translation mode (enabled by default)
+    @Published var isAutoTranslateMode = true
 
     // Currently detected words for automatic translation
     @Published var detectedWords: [DetectedWord] = []

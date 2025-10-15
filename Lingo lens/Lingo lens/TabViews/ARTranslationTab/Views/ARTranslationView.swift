@@ -147,6 +147,9 @@ struct ARTranslationView: View {
                     arViewModel.resetAnnotations()
                     arViewModel.resumeARSession()
                     alreadyResumedARSession = true
+
+                    // Automatically start auto-translate mode after AR session loads
+                    startAutoTranslateAfterDelay()
                 }
             }
 
@@ -426,58 +429,82 @@ struct ARTranslationView: View {
     
     /// Overlay showing auto-translated text
     private var autoTranslateOverlay: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
+            // Always show status when auto-translate is active
+            if arViewModel.isDetectionActive {
+                // Active scanning indicator
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 8, height: 8)
+                        .overlay(
+                            Circle()
+                                .fill(Color.green.opacity(0.3))
+                                .scaleEffect(1.5)
+                        )
+
+                    Text("Scanning...")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.black.opacity(0.6))
+                .cornerRadius(20)
+            }
+
             // Detected words
             if let firstWord = arViewModel.detectedWords.first {
-                VStack(spacing: 4) {
-                    Text("Detected:")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+                VStack(spacing: 8) {
+                    // Detected word
+                    HStack(spacing: 6) {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .font(.caption)
+                        Text(firstWord.text)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                    .background(Color.blue.opacity(0.85))
+                    .cornerRadius(16)
+                    .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
 
-                    Text(firstWord.text)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.blue.opacity(0.8))
-                .cornerRadius(12)
-
-                // Translation
-                if !arViewModel.autoTranslatedText.isEmpty {
-                    VStack(spacing: 4) {
-                        Text("Translation:")
+                    // Translation arrow
+                    if !arViewModel.autoTranslatedText.isEmpty {
+                        Image(systemName: "arrow.down")
                             .font(.caption)
                             .foregroundColor(.white.opacity(0.7))
+                            .padding(.vertical, 2)
 
-                        Text(arViewModel.autoTranslatedText)
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(Color.green.opacity(0.8))
-                    .cornerRadius(12)
-                }
-            } else {
-                // Scanning state
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                        .tint(.white)
-                    Text("Scanning for words...")
-                        .font(.callout)
+                        // Translated text
+                        HStack(spacing: 6) {
+                            Image(systemName: "globe")
+                                .font(.caption)
+                            Text(arViewModel.autoTranslatedText)
+                                .font(.system(size: 32, weight: .bold))
+                        }
                         .foregroundColor(.white)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.green.opacity(0.9), Color.green.opacity(0.7)]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .cornerRadius(20)
+                        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
+                    }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.orange.opacity(0.8))
-                .cornerRadius(12)
             }
         }
         .padding(.horizontal)
+        .animation(.easeInOut(duration: 0.3), value: arViewModel.detectedWords.count)
+        .animation(.easeInOut(duration: 0.3), value: arViewModel.autoTranslatedText)
     }
 
     /// View that handles the draggable detection box
@@ -608,18 +635,68 @@ struct ARTranslationView: View {
     private func enforceMarginConstraints(_ rect: CGRect, in containerSize: CGSize) -> CGRect {
         let margin: CGFloat = 16
         let minBoxSize: CGFloat = 100
-        
+
         var newRect = rect
-        
+
         // Enforce minimum and maximum width
         newRect.size.width = max(minBoxSize, min(newRect.size.width, containerSize.width - (2 * margin)))
         newRect.size.height = max(minBoxSize, min(newRect.size.height, containerSize.height - (2 * margin)))
-        
+
         // Enforce margin constraints for origin
         newRect.origin.x = max(margin, min(newRect.origin.x, containerSize.width - newRect.size.width - margin))
         newRect.origin.y = max(margin, min(newRect.origin.y, containerSize.height - newRect.size.height - margin))
-        
+
         return newRect
+    }
+
+    /// Automatically starts auto-translate mode after AR session is ready
+    private func startAutoTranslateAfterDelay() {
+        // Wait for AR session to stabilize
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            guard self.arViewModel.isAutoTranslateMode else { return }
+            guard !self.arViewModel.isARSessionLoading else {
+                // If still loading, try again
+                self.startAutoTranslateAfterDelay()
+                return
+            }
+
+            print("🚀 Auto-starting translation mode")
+
+            // Check if language is downloaded
+            Task {
+                let isDownloaded = await self.translationService.isLanguageDownloaded(
+                    language: self.arViewModel.selectedLanguage
+                )
+
+                await MainActor.run {
+                    if isDownloaded {
+                        // Prepare translation configuration
+                        self.arViewModel.autoTranslateConfiguration = TranslationSession.Configuration(
+                            source: self.translationService.sourceLanguage,
+                            target: self.arViewModel.selectedLanguage.locale
+                        )
+
+                        // Initialize ROI in center of screen
+                        if let sceneView = self.arViewModel.sceneView {
+                            let boxSize: CGFloat = 200
+                            self.arViewModel.adjustableROI = CGRect(
+                                x: (sceneView.bounds.width - boxSize) / 2,
+                                y: (sceneView.bounds.height - boxSize) / 2,
+                                width: boxSize,
+                                height: boxSize
+                            )
+                        }
+
+                        // Start detection automatically
+                        self.arViewModel.isDetectionActive = true
+                        print("✅ Auto-translate started successfully")
+                    } else {
+                        print("⚠️ Language not downloaded - user needs to download manually")
+                        // Keep toggle on but don't start detection yet
+                    }
+                }
+            }
+        }
     }
 }
 

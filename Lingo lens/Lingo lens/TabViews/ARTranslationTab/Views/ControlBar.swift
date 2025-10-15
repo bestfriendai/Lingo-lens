@@ -25,11 +25,17 @@ struct ControlBar: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            // Auto-translate mode toggle
+            // Auto-translate mode toggle (simplified, always visible)
             HStack {
-                Text("Auto-Translate Mode")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white)
+                Image(systemName: arViewModel.isAutoTranslateMode ? "wand.and.stars" : "wand.and.stars.inverse")
+                    .font(.system(size: 16))
+                    .foregroundColor(arViewModel.isAutoTranslateMode ? .green : .gray)
+
+                Text(arViewModel.isAutoTranslateMode ? "Auto-Translate: ON" : "Auto-Translate: OFF")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(arViewModel.isAutoTranslateMode ? .green : .gray)
+
+                Spacer()
 
                 Toggle("", isOn: $arViewModel.isAutoTranslateMode)
                     .labelsHidden()
@@ -42,13 +48,14 @@ struct ControlBar: View {
                             arViewModel.isDetectionActive = false
                             arViewModel.detectedObjectName = ""
                             arViewModel.autoTranslatedText = ""
+                            arViewModel.autoTranslateConfiguration = nil
                         }
                     }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
-            .background(Color.black.opacity(0.6))
-            .cornerRadius(10)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.black.opacity(0.7))
+            .cornerRadius(12)
 
             HStack {
                 settingsButton
