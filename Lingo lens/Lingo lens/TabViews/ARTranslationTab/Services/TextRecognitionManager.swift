@@ -134,9 +134,9 @@ class TextRecognitionManager {
                 completion(detectedWords)
             }
 
-            // Configure recognition settings for SPEED (Google Translate-style)
-            // Use .fast instead of .accurate for real-time translation (100ms vs 500ms)
-            request.recognitionLevel = .fast
+            // Configure recognition settings for ACCURACY with speed optimizations
+            // Use .accurate for reliable confidence scores (fast mode produces confidence < 0.3)
+            request.recognitionLevel = .accurate
             request.usesLanguageCorrection = false  // Disable for speed
             request.recognitionLanguages = self.recognitionLanguages
 
@@ -260,7 +260,8 @@ struct DetectedWord: Identifiable {
     var translation: String? = nil
 
     /// Returns true if confidence is above minimum threshold
+    /// Lower threshold (0.3) for fast recognition mode compatibility
     var isConfident: Bool {
-        return confidence > 0.5
+        return confidence > 0.3
     }
 }
