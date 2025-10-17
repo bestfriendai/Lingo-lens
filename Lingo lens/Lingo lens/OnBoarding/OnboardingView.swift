@@ -35,23 +35,23 @@ struct OnboardingView: View {
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             image: "camera.viewfinder",
-            title: "Translate Your World",
-            description: "Point your camera at objects around you, then add labels that translate to your chosen language."
+            titleKey: "onboarding.translate_world_title",
+            descriptionKey: "onboarding.translate_world_description"
         ),
         OnboardingPage(
             image: "hand.tap.fill",
-            title: "Interactive Learning",
-            description: "Tap labels to see translations, hear pronunciations, and save words."
+            titleKey: "onboarding.interactive_learning_title",
+            descriptionKey: "onboarding.interactive_learning_description"
         ),
         OnboardingPage(
             image: "bookmark.fill",
-            title: "Build Your Vocabulary",
-            description: "All saved translations are organized in your personal collection."
+            titleKey: "onboarding.build_vocabulary_title",
+            descriptionKey: "onboarding.build_vocabulary_description"
         ),
         OnboardingPage(
             image: "gear",
-            title: "Select Language",
-            description: "Select your language of choice from the settings."
+            titleKey: "onboarding.select_language_title",
+            descriptionKey: "onboarding.select_language_description"
         )
     ]
     
@@ -65,18 +65,18 @@ struct OnboardingView: View {
                     .foregroundColor(.blue)
                     .padding(.bottom, isCompactVertical ? 0 : 8)
                 
-                Text("Lingo lens")
+                Text(localized: "app.name")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                 
                 // Hide tagline in landscape to save vertical space
                 if !isCompactVertical {
-                    Text("Learn languages naturally")
+                    Text(localized: "app.tagline")
                         .font(.headline)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
                     
-                    Text("Created by Abhyas Mall")
+                    Text(localized: "app.author")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.top, 4)
@@ -108,7 +108,7 @@ struct OnboardingView: View {
                             Spacer()
                             
                             // Description text with leading alignment for better readability in landscape
-                            Text(pages[index].description)
+                            Text(localized: pages[index].descriptionKey)
                                     .font(.body)
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.leading)
@@ -140,13 +140,13 @@ struct OnboardingView: View {
                             
                             // Feature title and description
                             VStack {
-                                Text(pages[index].title)
+                                Text(localized: pages[index].titleKey)
                                     .font(.title2)
                                     .fontWeight(.bold)
                                     .multilineTextAlignment(.center)
                                     .padding(.bottom)
                                 
-                                Text(pages[index].description)
+                                Text(localized: pages[index].descriptionKey)
                                     .font(.body)
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
@@ -181,7 +181,7 @@ struct OnboardingView: View {
             
             // Start button
             Button(action: onDismiss) {
-                Text("Start Learning")
+                Text(localized: "onboarding.start_learning")
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -201,8 +201,8 @@ struct OnboardingView: View {
 /// Represents content for a single onboarding page
 struct OnboardingPage {
     let image: String
-    let title: String
-    let description: String
+    let titleKey: String
+    let descriptionKey: String
 }
 
 #Preview {

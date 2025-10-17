@@ -27,5 +27,4 @@ protocol ObjectDetecting {
     )
 }
 
-// Make ObjectDetectionManager conform to the protocol
-extension ObjectDetectionManager: ObjectDetecting {}
+

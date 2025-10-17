@@ -39,7 +39,7 @@ class SpeechErrorManager: ObservableObject, ErrorManaging {
 struct SpeechErrorAlert: ViewModifier {
     
     // Keep track of the error manager's state
-    @ObservedObject var errorManager: ErrorManaging
+    @ObservedObject var errorManager: SpeechErrorManager
     
     func body(content: Content) -> some View {
         content
@@ -62,7 +62,7 @@ struct SpeechErrorAlert: ViewModifier {
 
 /// Helper extension to make speech error handling easy to add to any view
 extension View {
-    func withSpeechErrorHandling(errorManager: ErrorManaging) -> some View {
+    func withSpeechErrorHandling(errorManager: SpeechErrorManager) -> some View {
         self.modifier(SpeechErrorAlert(errorManager: errorManager))
     }
 }

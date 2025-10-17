@@ -52,8 +52,11 @@ struct PrimaryButton: View {
                     ProgressView()
                         .scaleEffect(0.8)
                         .tint(foregroundColor)
+                        .accessibilityLabel("Loading")
+                        .accessibilityAddTraits(.updatesFrequently)
                 } else if let icon = icon {
                     Image(systemName: icon)
+                        .accessibilityHidden(true)
                 }
                 
                 Text(title)
@@ -68,6 +71,10 @@ struct PrimaryButton: View {
             .cornerRadius(12)
         }
         .disabled(isDisabled || isLoading)
+        .accessibilityLabel(isLoading ? "Loading \(title)" : title)
+        .accessibilityHint(isLoading ? "Please wait while operation completes" : "Tap to perform action")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityRemoveTraits(isDisabled ? .isButton : [])
     }
 }
 

@@ -52,6 +52,8 @@ struct MessageBubbleView: View, Equatable {
                                 .foregroundStyle(.white)
                                 .padding(4)
                                 .background(Circle().fill(.blue))
+                                .accessibilityLabel("From speech")
+                                .accessibilityHint("This message was transcribed from speech")
                         }
                     }
 
@@ -65,6 +67,8 @@ struct MessageBubbleView: View, Equatable {
                     .font(.body)
                     .foregroundStyle(.primary)
                     .textSelection(.enabled)
+                    .accessibilityLabel("Original text: \(message.originalText)")
+                    .accessibilityAddTraits(.isStaticText)
             }
             .padding(14)
             .background(
@@ -77,6 +81,8 @@ struct MessageBubbleView: View, Equatable {
                 Button(action: { copyText(message.originalText, section: .original) }) {
                     Label("Copy", systemImage: "doc.on.doc")
                 }
+                .accessibilityLabel("Copy original text")
+                .accessibilityHint("Copy the original text to clipboard")
             }
 
             // Translation arrow with better visual hierarchy
@@ -109,6 +115,8 @@ struct MessageBubbleView: View, Equatable {
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
                     .textSelection(.enabled)
+                    .accessibilityLabel("Translated text: \(message.translatedText)")
+                    .accessibilityAddTraits(.isStaticText)
             }
             .padding(14)
             .background(
@@ -121,6 +129,8 @@ struct MessageBubbleView: View, Equatable {
                 Button(action: { copyText(message.translatedText, section: .translated) }) {
                     Label("Copy", systemImage: "doc.on.doc")
                 }
+                .accessibilityLabel("Copy translated text")
+                .accessibilityHint("Copy the translated text to clipboard")
             }
 
             // Timestamp with better styling
@@ -134,6 +144,8 @@ struct MessageBubbleView: View, Equatable {
                         .font(.caption2)
                         .foregroundStyle(.green)
                         .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                        .accessibilityLabel("Copied \(copied == .original ? "original" : "translation")")
+                        .accessibilityAddTraits(.updatesFrequently)
                 }
             }
             .padding(.leading, 14)
@@ -218,6 +230,9 @@ struct SpeakerButton: View {
                 .scaleEffect(isPressed ? 0.85 : 1.0)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(color == .blue ? "Speak original text" : "Speak translated text")
+        .accessibilityHint("Tap to hear pronunciation")
+        .accessibilityAddTraits(.isButton)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
@@ -249,7 +264,7 @@ struct SpeakerButton: View {
         isFromSpeech: false
     )
 
-    return ScrollView {
+    ScrollView {
         MessageBubbleView(
             message: message,
             onSpeakOriginal: { print("Speak original") },
@@ -267,7 +282,7 @@ struct SpeakerButton: View {
         isFromSpeech: true
     )
 
-    return ScrollView {
+    ScrollView {
         MessageBubbleView(
             message: message,
             onSpeakOriginal: { print("Speak original") },

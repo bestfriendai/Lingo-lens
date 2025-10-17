@@ -26,17 +26,17 @@ struct CameraPermissionView: View {
             
             // Header and explanation text section
             VStack(spacing: 16) {
-                Text("Camera Access Required")
+                Text(localized: "camera.permission_required")
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)
                 
-                Text("Lingo Lens needs camera access to help you learn languages through object recognition. Please enable camera access in Settings to start your learning journey.")
+                Text(localized: "camera.permission_description")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
-                    .accessibilityLabel("Camera access is required for object detection and translation")
+                    .accessibilityLabel("camera.permission_accessibility".localized())
             }
             
             // Action buttons section
@@ -46,7 +46,7 @@ struct CameraPermissionView: View {
                 Button(action: openSettings) {
                     HStack(spacing: 8) {
                         Image(systemName: "gearshape.fill")
-                        Text("Open Settings")
+                        Text(localized: "camera.open_settings")
                     }
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -55,7 +55,7 @@ struct CameraPermissionView: View {
                     .background(Color.blue)
                     .cornerRadius(12)
                 }
-                .accessibilityHint("Opens iOS Settings to enable camera access")
+                .accessibilityHint("camera.open_settings_hint".localized())
                 .padding(.horizontal, 32)
             }
             .padding(.top, 8)

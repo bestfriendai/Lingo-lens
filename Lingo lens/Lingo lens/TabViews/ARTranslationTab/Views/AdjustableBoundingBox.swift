@@ -66,6 +66,7 @@ struct AdjustableBoundingBox: View {
                     HStack(spacing: 6) {
                         Image(systemName: "viewfinder.circle")
                             .font(.system(size: 13, weight: .semibold))
+                            .accessibilityHidden(true)
                         Text("Frame object here")
                             .font(.system(size: 13, weight: .semibold))
                     }
@@ -78,6 +79,8 @@ struct AdjustableBoundingBox: View {
                             .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
                     )
                     .padding(.top, 12)
+                    .accessibilityLabel("Frame object here")
+                    .accessibilityHint("Position this box around the object you want to translate")
                     
                     Spacer()
                 }
@@ -127,6 +130,7 @@ struct AdjustableBoundingBox: View {
         .gesture(mainDragGesture)
         .accessibilityLabel("\(position.rawValue) edge")
         .accessibilityHint("Drag to move the detection box")
+        .accessibilityAddTraits(.isButton)
     }
     
     /// Calculates the position for edge handles based on the box position
@@ -377,6 +381,7 @@ struct AdjustableBoundingBox: View {
             )
             .accessibilityLabel("\(position.rawValue) resize handle")
             .accessibilityHint("Drag to resize the detection box")
+            .accessibilityAddTraits(.isButton)
     }
     
     /// Custom shape that creates larger touch targets around the box edges and corners

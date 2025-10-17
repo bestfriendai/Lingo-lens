@@ -10,7 +10,7 @@ import CoreGraphics
 
 /// Protocol defining data persistence capabilities
 /// Enables dependency injection and testing with mock implementations
-protocol DataPersisting {
+protocol DataPersisting: AnyObject, ObservableObject {
     
     // MARK: - App Launch Tracking
     
@@ -82,5 +82,4 @@ protocol DataPersisting {
     func getAnnotationScale() -> CGFloat
 }
 
-// Make DataManager conform to the protocol
-extension DataManager: DataPersisting {}
+

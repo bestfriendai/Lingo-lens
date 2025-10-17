@@ -52,12 +52,14 @@ struct LanguageSelectionView: View {
                 if language.shortName() == tempSelectedLanguage.shortName() {
                     Image(systemName: "checkmark")
                         .foregroundColor(.blue)
+                        .accessibilityHidden(true)
                 }
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(language.localizedName())")
             .accessibilityValue(language.shortName() == tempSelectedLanguage.shortName() ? "Selected" : "")
             .accessibilityAddTraits(language.shortName() == tempSelectedLanguage.shortName() ? .isSelected : [])
+            .accessibilityAddTraits(.isButton)
             .contentShape(Rectangle())
             .onTapGesture {
                 print("👆 Selected language: \(language.localizedName()) (\(language.shortName()))")
@@ -90,6 +92,9 @@ struct LanguageSelectionView: View {
                     print("👆 Button pressed: Cancel language selection")
                     dismiss()
                 }
+                .accessibilityLabel("Cancel")
+                .accessibilityHint("Discard changes and return to settings")
+                .accessibilityAddTraits(.isButton)
             }
             
             ToolbarItem(placement: .confirmationAction) {
@@ -101,6 +106,9 @@ struct LanguageSelectionView: View {
                         target: tempSelectedLanguage.locale
                     )
                 }
+                .accessibilityLabel("Done")
+                .accessibilityHint("Confirm selection of \(tempSelectedLanguage.localizedName())")
+                .accessibilityAddTraits(.isButton)
             }
         }
         
@@ -109,10 +117,13 @@ struct LanguageSelectionView: View {
             isDownloading ?
                 VStack {
                     ProgressView("Preparing language...")
+                        .accessibilityLabel("Preparing language")
+                        .accessibilityAddTraits(.updatesFrequently)
                     Text("This might take a moment")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .padding(.top, 4)
+                        .accessibilityLabel("This might take a moment")
                 }
                 .padding()
                 .background(Color(.systemBackground).opacity(0.9))
@@ -127,8 +138,12 @@ struct LanguageSelectionView: View {
                 selectedLanguage = tempSelectedLanguage
                 dismiss()
             }
+            .accessibilityLabel("OK")
+            .accessibilityHint("Dismiss error and continue with selected language")
+            .accessibilityAddTraits(.isButton)
         } message: {
             Text("Unable to download language data. Translations may not work properly.")
+                .accessibilityLabel("Download error message")
         }
         
         // Hidden view that handles language download
@@ -166,6 +181,10 @@ struct LanguageSelectionView: View {
 
 
 #Preview {
+    createLanguageSelectionPreview()
+}
+
+private func createLanguageSelectionPreview() -> some View {
     let sampleLanguage = AvailableLanguage(locale: Locale.Language(languageCode: "es", region: "ES"))
     
     let translationService = TranslationService()
@@ -176,7 +195,7 @@ struct LanguageSelectionView: View {
         AvailableLanguage(locale: Locale.Language(languageCode: "it", region: "IT"))
     ]
     
-    return NavigationView {
+    NavigationView {
         LanguageSelectionView(selectedLanguage: .constant(sampleLanguage))
             .environmentObject(translationService)
     }

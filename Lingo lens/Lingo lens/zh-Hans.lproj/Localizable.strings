@@ -1,0 +1,218 @@
+/* 
+  Localizable.strings (Chinese Simplified)
+  Lingo lens
+
+  Created by Localization Implementation on 10/17/25.
+*/
+
+// MARK: - App General
+"app.name" = "Lingo Lens";
+"app.tagline" = "自然学习语言";
+"app.author" = "由 Abhyas Mall 创建";
+"app.language" = "应用语言";
+
+// MARK: - Tab Bar
+"tab.translate" = "翻译";
+"tab.chat" = "聊天";
+"tab.saved_words" = "保存的单词";
+"tab.settings" = "设置";
+
+// MARK: - Common Actions
+"action.ok" = "确定";
+"action.cancel" = "取消";
+"action.done" = "完成";
+"action.save" = "保存";
+"action.delete" = "删除";
+"action.clear" = "清除";
+"action.start" = "开始";
+"action.stop" = "停止";
+"action.retry" = "重试";
+"action.open_settings" = "打开设置";
+"action.close" = "关闭";
+
+// MARK: - Loading States
+"loading.loading" = "加载中...";
+"loading.translating" = "翻译中...";
+"loading.processing" = "处理中...";
+
+// MARK: - Camera & AR
+"camera.permission_required" = "需要相机访问权限";
+"camera.permission_description" = "Lingo Lens 需要相机访问权限来帮助您通过物体识别学习语言。请在设置中启用相机访问权限以开始您的学习之旅。";
+"camera.permission_accessibility" = "物体检测和翻译需要相机访问权限";
+"camera.open_settings" = "打开设置";
+"camera.open_settings_hint" = "打开 iOS 设置以启用相机访问权限";
+
+// AR Errors
+"ar.session_error" = "AR 会话错误";
+"ar.tracking_lost" = "跟踪丢失";
+"ar.poor_environment" = "环境不佳";
+"ar.detection_failed" = "检测失败";
+"ar.model_error" = "模型错误";
+"ar.processing_failed" = "处理失败";
+
+"ar.session_failed" = "AR 会话遇到问题：%@。请重试。";
+"ar.tracking_lost_message" = "AR 跟踪丢失。请缓慢移动设备并将其对准光线充足的区域。";
+"ar.insufficient_features" = "检测到的视觉特征不足。请将相机对准有纹理的表面。";
+"ar.object_detection_failed" = "无法检测到任何物体。尝试调整检测框或对准不同的物体。";
+"ar.model_load_failed" = "无法加载物体检测模型。应用可能无法正常工作。";
+"ar.image_processing_failed" = "图像处理失败。请重试。";
+
+// MARK: - Translation
+"translation.no_languages_title" = "没有可用语言";
+"translation.no_languages_message" = "当前没有可用的翻译语言。这可能是由于网络连接问题或 Apple 翻译服务不可用。请稍后重试或检查设备翻译服务是否在设置中启用。";
+
+// Translation Errors
+"translation.not_ready" = "未就绪";
+"translation.timeout" = "超时";
+"translation.text_too_long" = "文本过长";
+"translation.network_error" = "网络错误";
+"translation.invalid_language" = "无效语言";
+"translation.error" = "翻译错误";
+
+"translation.session_not_ready" = "翻译尚未就绪。请稍等片刻后重试。";
+"translation.timeout_message" = "翻译耗时过长。请检查您的网络连接并重试。";
+"translation.text_too_long_message" = "文本过长。最多允许 5000 个字符。";
+"translation.network_error_message" = "没有网络连接。请连接到互联网并重试。";
+"translation.invalid_language_message" = "所选语言不受支持。请选择不同的语言。";
+"translation.unknown_error" = "翻译失败：%@";
+
+// MARK: - Chat Translator
+"chat.title" = "聊天翻译器";
+"chat.clear_all" = "清除全部";
+"chat.translation_error" = "翻译错误";
+"chat.from" = "从";
+"chat.to" = "到";
+"chat.source_language" = "源语言";
+"chat.target_language" = "目标语言";
+
+// Chat Empty State
+"chat.start_conversation" = "开始对话";
+"chat.start_conversation_description" = "输入消息或使用麦克风实时翻译语音";
+"chat.type_to_translate" = "输入以翻译";
+"chat.type_to_translate_description" = "输入任何文本并获得即时翻译";
+"chat.speak_naturally" = "自然说话";
+"chat.speak_naturally_description" = "点击麦克风翻译您的语音";
+"chat.hear_pronunciations" = "听发音";
+"chat.hear_pronunciations_description" = "收听带有本地口音的翻译";
+
+// MARK: - Speech
+"speech.permission_needed" = "需要权限";
+"speech.recognition_failed" = "识别失败";
+"speech.no_voices" = "没有语音";
+"speech.playback_failed" = "播放失败";
+"speech.audio_error" = "音频错误";
+
+"speech.recognition_not_authorized" = "麦克风访问被拒绝。在设置中启用它以使用语音输入。";
+"speech.recognition_failed_message" = "无法识别语音：%@。请重试。";
+"speech.synthesis_no_voices" = "此语言没有可用的语音。";
+"speech.synthesis_failed" = "无法播放音频：%@";
+"speech.audio_session_failed" = "音频系统不可用。请检查您的设备设置。";
+
+// MARK: - Data Persistence
+"persistence.save_failed" = "保存失败";
+"persistence.load_failed" = "加载失败";
+"persistence.delete_failed" = "删除失败";
+"persistence.database_error" = "数据库错误";
+
+"persistence.save_failure" = "无法保存：%@";
+"persistence.fetch_failure" = "无法加载数据：%@";
+"persistence.delete_failure" = "无法删除：%@";
+"persistence.store_load_failure" = "数据库加载失败：%@。请重启应用。";
+
+// MARK: - Settings
+"settings.title" = "设置";
+"settings.translation" = "翻译";
+"settings.language" = "语言";
+"settings.select_language" = "选择翻译语言";
+"settings.current_language" = "当前语言：%@";
+"settings.appearance" = "外观";
+"settings.color_scheme" = "颜色方案";
+"settings.choose_color_scheme" = "选择颜色方案";
+"settings.color_scheme_hint" = "在浅色模式、深色模式或系统默认之间选择";
+"settings.about" = "关于";
+"settings.version" = "版本";
+
+// Color Scheme Options
+"appearance.system" = "系统";
+"appearance.light" = "浅色";
+"appearance.dark" = "深色";
+
+// MARK: - Onboarding
+"onboarding.start_learning" = "开始学习";
+
+// Onboarding Pages
+"onboarding.translate_world_title" = "翻译您的世界";
+"onboarding.translate_world_description" = "将相机对准周围的物体，然后添加翻译成您选择语言的标签。";
+
+"onboarding.interactive_learning_title" = "互动学习";
+"onboarding.interactive_learning_description" = "点击标签查看翻译、听发音并保存单词。";
+
+"onboarding.build_vocabulary_title" = "建立您的词汇量";
+"onboarding.build_vocabulary_description" = "所有保存的翻译都组织在您的个人收藏中。";
+
+"onboarding.select_language_title" = "选择语言";
+"onboarding.select_language_description" = "从设置中选择您选择的语言。";
+
+// MARK: - Saved Words
+"saved_words.title" = "保存的单词";
+"saved_words.empty_title" = "没有保存的单词";
+"saved_words.empty_description" = "您保存的翻译将出现在这里。开始翻译以建立您的词汇量！";
+"saved_words.filter_all" = "所有语言";
+"saved_words.search_placeholder" = "搜索保存的单词...";
+"saved_words.delete_confirmation" = "删除翻译";
+"saved_words.delete_message" = "您确定要删除此翻译吗？";
+"saved_words.delete_button" = "删除";
+"saved_words.cancel_button" = "取消";
+
+// MARK: - Language Selection
+"language.select_language" = "选择语言";
+"language.download_required" = "需要下载";
+"language.download_description" = "此语言需要下载额外数据进行翻译。";
+"language.download_button" = "下载";
+"language.downloading" = "下载中...";
+"language.download_complete" = "下载完成";
+
+// MARK: - Accessibility
+"accessibility.camera_view" = "用于物体检测的相机视图";
+"accessibility.detection_label" = "检测到的物体：%@";
+"accessibility.translation_label" = "翻译：%@";
+"accessibility.play_pronunciation" = "播放发音";
+"accessibility.save_translation" = "保存翻译";
+"accessibility.delete_translation" = "删除翻译";
+"accessibility.swap_languages" = "交换源语言和目标语言";
+"accessibility.microphone_button" = "用于语音输入的麦克风";
+"accessibility.settings_button" = "设置";
+"accessibility.close_button" = "关闭";
+
+// MARK: - Errors
+"error.generic_title" = "错误";
+"error.generic_message" = "发生意外错误。请重试。";
+"error.network_title" = "网络错误";
+"error.network_message" = "请检查您的网络连接并重试。";
+"error.permission_title" = "需要权限";
+"error.permission_message" = "请在设置中启用所需权限。";
+
+// MARK: - Instructions
+"instructions.title" = "使用方法";
+"instructions.step1_title" = "对准相机";
+"instructions.step1_description" = "将相机对准您要翻译的物体。";
+
+"instructions.step2_title" = "检测物体";
+"instructions.step2_description" = "应用将自动检测相机视图中的物体。";
+
+"instructions.step3_title" = "点击翻译";
+"instructions.step3_description" = "点击检测到的物体以查看您选择语言的翻译。";
+
+"instructions.step4_title" = "保存和学习";
+"instructions.step4_description" = "保存翻译以建立您的个人词汇量。";
+
+// MARK: - Date & Time Formatting
+"date.today" = "今天";
+"date.yesterday" = "昨天";
+"date.minutes_ago" = "%d 分钟前";
+"date.hours_ago" = "%d 小时前";
+"date.days_ago" = "%d 天前";
+
+// MARK: - Plurals (for stringsdict)
+"items.count" = "%d 个项目";
+"translations.saved" = "%d 个保存的翻译";

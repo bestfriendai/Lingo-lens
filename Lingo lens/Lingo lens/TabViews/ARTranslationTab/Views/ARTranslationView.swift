@@ -21,7 +21,7 @@ struct ARTranslationView: View {
     @ObservedObject var arViewModel: ARViewModel
     
     // Speech manager for pronunciation features
-    @EnvironmentObject var speechManager: SpeechManaging
+    @EnvironmentObject var speechManager: SpeechManager
     
     // DI Container for creating ViewModels
     @EnvironmentObject var diContainer: DIContainer
@@ -96,12 +96,15 @@ struct ARTranslationView: View {
                                 ProgressView()
                                     .scaleEffect(1.3)
                                     .tint(.white)
+                                    .accessibilityLabel("Loading AR session")
+                                    .accessibilityAddTraits(.updatesFrequently)
                                 
                                 Text(arViewModel.loadingMessage)
                                     .foregroundColor(.white)
                                     .font(.system(size: 15, weight: .medium))
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 32)
+                                    .accessibilityLabel(arViewModel.loadingMessage)
                             }
                             .padding(24)
                             .background(
@@ -131,6 +134,7 @@ struct ARTranslationView: View {
                                 .foregroundColor(arViewModel.translationOverlays.isEmpty ? .gray : .red)
                                 .accessibilityLabel("Clear Translations")
                                 .accessibilityHint("Remove all translation overlays from screen")
+                                .accessibilityAddTraits(.isButton)
                         }
                         .disabled(arViewModel.translationOverlays.isEmpty)
                     }
@@ -149,6 +153,7 @@ struct ARTranslationView: View {
                                 .foregroundColor(.primary)
                                 .accessibilityLabel("Instructions")
                                 .accessibilityHint("Learn how to use the Translate Feature")
+                                .accessibilityAddTraits(.isButton)
                         }
                         .disabled(showInstructions)
                     }
@@ -319,6 +324,9 @@ struct ARTranslationView: View {
                                 .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
                         )
                         .transition(.scale.combined(with: .opacity))
+                        .accessibilityLabel("Live Translation Active")
+                        .accessibilityHint("Point camera at text to see instant translations")
+                        .accessibilityAddTraits(.updatesFrequently)
                     }
 
                     if arViewModel.showPlacementError {
@@ -326,6 +334,7 @@ struct ARTranslationView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.orange)
+                                .accessibilityHidden(true)
                             
                             Text(arViewModel.placementErrorMessage)
                                 .font(.system(size: 15, weight: .medium))
@@ -341,7 +350,9 @@ struct ARTranslationView: View {
                         .padding(.horizontal, 16)
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .zIndex(1)
+                        .accessibilityLabel("Error: \(arViewModel.placementErrorMessage)")
                         .accessibilityAddTraits(.updatesFrequently)
+                        .accessibilityRole(.alert)
                     }
                 }
                 .padding(.top, 16)
@@ -368,9 +379,12 @@ struct ARTranslationView: View {
                         ProgressView()
                             .scaleEffect(1.1)
                             .tint(.white)
+                            .accessibilityLabel("Removing annotation")
+                            .accessibilityAddTraits(.updatesFrequently)
                         Text("Removing label...")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
+                            .accessibilityLabel("Removing label...")
                     }
                     .padding(.horizontal, 24)
                     .padding(.vertical, 16)
@@ -420,17 +434,23 @@ struct ARTranslationView: View {
                     UIApplication.shared.open(url)
                 }
             }
+            .accessibilityLabel("Rate now on App Store")
+            .accessibilityHint("Open App Store to rate Lingo Lens")
             
             // Later button - just dismisses for now
             Button("Later") {
                 diContainer.dataPersistence.markRatingPromptAsShown()
             }
+            .accessibilityLabel("Remind me later")
+            .accessibilityHint("Dismiss this alert and ask again later")
             
             // Don't ask again button
             Button("Don't Ask Again", role: .cancel) {
                 diContainer.dataPersistence.setNeverAskForRating()
                 diContainer.dataPersistence.markRatingPromptAsShown()
             }
+            .accessibilityLabel("Don't ask again")
+            .accessibilityHint("Never show this rating prompt again")
         } message: {
             Text("If you enjoy using our app, would you mind taking a moment to rate it? It won't take more than a minute. Thanks for your support!")
         }
@@ -438,10 +458,14 @@ struct ARTranslationView: View {
         // Alert about label removal when leaving tab
         .alert("Label Removal Warning", isPresented: $showAlertAboutReset) {
             Button("Ok") {}
+                .accessibilityLabel("OK")
+                .accessibilityHint("Acknowledge the warning and continue")
             Button("Don't Warn Again", role: .cancel) {
                 diContainer.dataPersistence.saveNeverShowLabelRemovalWarning(true)
                 neverShowAlertAboutReset = true
             }
+            .accessibilityLabel("Don't warn again")
+            .accessibilityHint("Disable this warning for future tab changes")
         } message: {
             Text("Whenever you leave the Translate tab, all labels will be removed from the objects in the real world.")
         }
@@ -451,9 +475,13 @@ struct ARTranslationView: View {
             Button("Cancel", role: .cancel) {
                 arViewModel.annotationToDelete = nil
             }
+            .accessibilityLabel("Cancel deletion")
+            .accessibilityHint("Keep the annotation and do not delete it")
             Button("Delete", role: .destructive) {
                 arViewModel.deleteAnnotation()
             }
+            .accessibilityLabel("Delete label")
+            .accessibilityHint("Permanently remove this translation annotation")
         } message: {
             Text("Remove the \"\(arViewModel.annotationNameToDelete)\" label?")
         }
@@ -613,29 +641,33 @@ struct ARTranslationView: View {
                                     overlay.screenPosition.y + halfHeight < geometry.size.height + margin
 
                     if !overlay.isStale && isInBounds {
-                        Text(overlay.translatedText)
-                            .font(.system(size: overlay.fontSize, weight: .semibold, design: .rounded))
-                            .foregroundColor(.black)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.8)  // Less aggressive scaling
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 4)   // Reduced padding
-                            .padding(.vertical, 2)     // Reduced padding
-                            .frame(width: overlay.originalSize.width, 
-                                   height: overlay.originalSize.height)
-                            .background(
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.white.opacity(0.95))
-                                    .shadow(color: Color.black.opacity(0.12), radius: 1.5, x: 0, y: 0.5)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 2)
-                                            .stroke(Color.black.opacity(0.06), lineWidth: 0.3)
-                                    )
-                            )
-                            .position(overlay.screenPosition)
-                            .transition(.opacity)
-                            .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: overlay.screenPosition)
-                            .id(overlay.id)
+                    Text(overlay.translatedText)
+                        .font(.system(size: overlay.fontSize, weight: .semibold, design: .rounded))
+                        .foregroundColor(.black)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)  // Less aggressive scaling
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 4)   // Reduced padding
+                        .padding(.vertical, 2)     // Reduced padding
+                        .frame(width: overlay.originalSize.width, 
+                               height: overlay.originalSize.height)
+                        .background(
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.white.opacity(0.95))
+                                .shadow(color: Color.black.opacity(0.12), radius: 1.5, x: 0, y: 0.5)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .stroke(Color.black.opacity(0.06), lineWidth: 0.3)
+                                )
+                        )
+                        .position(overlay.screenPosition)
+                        .transition(.opacity)
+                        .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: overlay.screenPosition)
+                        .id(overlay.id)
+                        .accessibilityLabel("Translation: \(overlay.translatedText)")
+                        .accessibilityHint("Translated from \(overlay.originalWord)")
+                        .accessibilityAddTraits(.isStaticText)
+                        .allowsHitTesting(false)
                     }
                 }
             }
@@ -780,6 +812,7 @@ struct ARTranslationView: View {
                         .padding(.trailing, 8)
                         .accessibilityLabel("Close detection box")
                         .accessibilityHint("Exits object detection mode")
+                        .accessibilityAddTraits(.isButton)
                     }
                     Spacer()
                 }
@@ -939,6 +972,10 @@ struct ARTranslationView: View {
 }
 
 #Preview("Normal State") {
+    createNormalStateARPreview()
+}
+
+private func createNormalStateARPreview() -> some View {
     let mockTranslationService = TranslationService()
     mockTranslationService.availableLanguages = [
         AvailableLanguage(locale: .init(languageCode: "es", region: "ES")),
@@ -946,15 +983,20 @@ struct ARTranslationView: View {
         AvailableLanguage(locale: .init(languageCode: "de", region: "DE"))
     ]
     
-    let arVM = ARViewModel()
+    let dataPersistence = DataManager()
+    let arVM = ARViewModel(dataPersistence: dataPersistence, translationService: mockTranslationService)
     
     return ARTranslationView(arViewModel: arVM)
         .environmentObject(mockTranslationService)
-        .environmentObject(AppearanceManager())
+        .environmentObject(AppearanceManager(dataPersistence: dataPersistence))
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
 
 #Preview("Active Detection") {
+    createActiveDetectionARPreview()
+}
+
+private func createActiveDetectionARPreview() -> some View {
     let mockTranslationService = TranslationService()
     mockTranslationService.availableLanguages = [
         AvailableLanguage(locale: .init(languageCode: "es", region: "ES")),
@@ -962,18 +1004,23 @@ struct ARTranslationView: View {
         AvailableLanguage(locale: .init(languageCode: "de", region: "DE"))
     ]
     
-    let arVM = ARViewModel()
+    let dataPersistence = DataManager()
+    let arVM = ARViewModel(dataPersistence: dataPersistence, translationService: mockTranslationService)
     arVM.isDetectionActive = true
     arVM.detectedObjectName = "Coffee Cup"
     arVM.adjustableROI = CGRect(x: 100, y: 100, width: 200, height: 200)
     
     return ARTranslationView(arViewModel: arVM)
         .environmentObject(mockTranslationService)
-        .environmentObject(AppearanceManager())
+        .environmentObject(AppearanceManager(dataPersistence: dataPersistence))
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
 
 #Preview("Settings Expanded") {
+    createSettingsExpandedARPreview()
+}
+
+private func createSettingsExpandedARPreview() -> some View {
     let mockTranslationService = TranslationService()
     mockTranslationService.availableLanguages = [
         AvailableLanguage(locale: .init(languageCode: "es", region: "ES")),
@@ -981,13 +1028,14 @@ struct ARTranslationView: View {
         AvailableLanguage(locale: .init(languageCode: "de", region: "DE"))
     ]
     
-    let arVM = ARViewModel()
+    let dataPersistence = DataManager()
+    let arVM = ARViewModel(dataPersistence: dataPersistence, translationService: mockTranslationService)
     let settingsVM = SettingsViewModel()
     settingsVM.isExpanded = true
     
     return ARTranslationView(arViewModel: arVM)
         .environmentObject(mockTranslationService)
-        .environmentObject(AppearanceManager())
+        .environmentObject(AppearanceManager(dataPersistence: dataPersistence))
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
 

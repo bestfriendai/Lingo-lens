@@ -15,7 +15,7 @@ struct InstructionsView: View {
     @Environment(\.dismiss) private var dismiss
     
     // Data persistence for tracking instruction state
-    @EnvironmentObject var dataPersistence: DataPersisting
+    @EnvironmentObject var dataPersistence: DataManager
     
     // To present the rating alert after the InstructionsView is dismissed
     @Binding var ratingAlert: Bool

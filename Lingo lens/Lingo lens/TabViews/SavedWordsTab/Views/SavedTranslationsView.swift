@@ -148,11 +148,11 @@ struct SavedTranslationsView: View {
                     .foregroundColor(.blue.opacity(0.7))
                     .padding(.bottom, 8)
                 
-                Text("No Saved Translations")
+                Text(localized: "saved_words.empty_title")
                     .font(.title2.bold())
                     .padding(.bottom, 8)
                 
-                Text("Your saved words will appear here.")
+                Text(localized: "saved_words.empty_description")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -172,7 +172,7 @@ struct SavedTranslationsView: View {
             
             // Shows total count of translations at the top
             Section {
-                Text("Total: \(savedTranslations.count)")
+Text(localizedPlural: "items.count", count: savedTranslations.count)
                     .font(.footnote)
                     .frame(maxWidth: .infinity, alignment: .center)
             }

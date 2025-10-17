@@ -117,7 +117,7 @@ class CoreDataErrorManager: ObservableObject, ErrorManaging {
 struct CoreDataErrorAlert: ViewModifier {
     
     // Observe the error manager to respond to its state changes
-    @ObservedObject var errorManager: ErrorManaging
+    @ObservedObject var errorManager: CoreDataErrorManager
     
     func body(content: Content) -> some View {
         content
@@ -141,7 +141,7 @@ struct CoreDataErrorAlert: ViewModifier {
 /// Extension on View to apply the CoreDataErrorAlert modifier
 /// Provides a simple way to add CoreData error handling to any view
 extension View {
-    func withCoreDataErrorHandling(errorManager: ErrorManaging) -> some View {
+    func withCoreDataErrorHandling(errorManager: CoreDataErrorManager) -> some View {
         self.modifier(CoreDataErrorAlert(errorManager: errorManager))
     }
 }

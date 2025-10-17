@@ -21,7 +21,7 @@ class SpeechManager: NSObject, ObservableObject, SpeechManaging {
     /// - Parameters:
     ///   - speechSynthesizer: Custom AVSpeechSynthesizer instance, defaults to new instance
     ///   - errorManager: Error manager for handling speech errors
-    init(speechSynthesizer: AVSpeechSynthesizer = AVSpeechSynthesizer(), errorManager: ErrorManaging? = nil) {
+    init(speechSynthesizer: AVSpeechSynthesizer = AVSpeechSynthesizer(), errorManager: (any ErrorManaging)? = nil) {
         self.speechSynthesizer = speechSynthesizer
         self.errorManager = errorManager
         super.init()
@@ -52,7 +52,7 @@ class SpeechManager: NSObject, ObservableObject, SpeechManaging {
     private let speechSynthesizer: AVSpeechSynthesizer
     
     // Error manager for handling speech errors
-    private let errorManager: ErrorManaging?
+    private let errorManager: (any ErrorManaging)?
     
     // Tracks if audio session is ready for playback
     private var isAudioSessionPrepared = false

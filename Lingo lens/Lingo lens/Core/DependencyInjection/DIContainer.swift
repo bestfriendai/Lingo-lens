@@ -28,12 +28,12 @@ final class DIContainer: ObservableObject {
 
     // AR-specific dependencies
     private(set) var objectDetectionManager: ObjectDetecting
-    private(set) var speechRecognitionManager: SpeechRecognizing
+    private(set) var speechRecognitionManager: SpeechRecognitionManager
 
     // Error managers
-    private(set) var coreDataErrorManager: ErrorManaging
-    private(set) var arErrorManager: ErrorManaging
-    private(set) var speechErrorManager: ErrorManaging
+    private(set) var coreDataErrorManager: any ErrorManaging
+    private(set) var arErrorManager: any ErrorManaging
+    private(set) var speechErrorManager: any ErrorManaging
 
     // MARK: - Initialization
 
@@ -42,7 +42,7 @@ final class DIContainer: ObservableObject {
         self.dataPersistence = DataManager()
         self.translationService = TranslationService()
         self.appearanceManager = AppearanceManager(dataPersistence: dataPersistence)
-        self.persistenceController = PersistenceController()
+        self.persistenceController = PersistenceController.shared
         self.coreDataErrorManager = CoreDataErrorManager()
         self.arErrorManager = ARErrorManager()
         self.speechErrorManager = SpeechErrorManager()
@@ -123,7 +123,7 @@ final class DIContainer: ObservableObject {
         self.dataPersistence = DataManager()
         self.translationService = TranslationService()
         self.appearanceManager = AppearanceManager(dataPersistence: dataPersistence)
-        self.persistenceController = PersistenceController()
+        self.persistenceController = PersistenceController.shared
         self.coreDataErrorManager = CoreDataErrorManager()
         self.arErrorManager = ARErrorManager()
         self.speechErrorManager = SpeechErrorManager()

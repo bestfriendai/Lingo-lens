@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - Accessibility Configuration
+
 @main
 struct Lingo_lensApp: App {
     
@@ -17,6 +19,12 @@ struct Lingo_lensApp: App {
 
     // Dependency injection container for centralized dependency management
     @StateObject private var diContainer = DIContainer.shared
+    
+    // Accessibility configuration
+    @StateObject private var accessibilityConfig = AccessibilityConfiguration()
+    
+    // Language manager for localization
+    @StateObject private var languageManager = AppLanguageManager.shared
 
     // Track whether to show onboarding
     @State private var showOnboarding = true
@@ -32,6 +40,11 @@ struct Lingo_lensApp: App {
         if !Self.didInitOnce {
             Self.didInitOnce = true
             SecureLogger.log("App initializing", level: .info)
+            
+            // Log accessibility status for debugging
+            #if DEBUG
+            AccessibilityAudit.logAccessibilityStatus()
+            #endif
         }
     }
 
@@ -51,23 +64,40 @@ struct Lingo_lensApp: App {
                             showOnboarding = false
                             diContainer.dataPersistence.finishOnBoarding()
                         }
+                        .environmentObject(languageManager)
                         .preferredColorScheme(diContainer.appearanceManager.colorSchemeOption.colorScheme)
+                        .configureAccessibility()
+                        .dynamicType()
+                        .highContrast()
+                        .reducedMotion()
                         
                     } else {
                         
                         ContentView()
 
                             // Makes translation service available to all child views
-                            .environmentObject(diContainer.translationService)
+                            .environmentObject(diContainer.translationService as! TranslationService)
 
                             // Makes appearance settings available to all child views
-                            .environmentObject(diContainer.appearanceManager)
+                            .environmentObject(diContainer.appearanceManager as! AppearanceManager)
 
                             // Makes DI container available for factory methods
                             .environmentObject(diContainer)
+                            
+                            // Makes accessibility configuration available to all views
+                            .environmentObject(accessibilityConfig)
+                            
+                            // Makes language manager available to all views
+                            .environmentObject(languageManager)
 
                             // Applies the user's selected color scheme
                             .preferredColorScheme(diContainer.appearanceManager.colorSchemeOption.colorScheme)
+                            
+                            // Apply global accessibility configuration
+                            .configureAccessibility()
+                            .dynamicType()
+                            .highContrast()
+                            .reducedMotion()
 
                             // Gives Core Data access to all views
                             .environment(\.managedObjectContext, diContainer.persistenceController.container.viewContext)
@@ -96,6 +126,8 @@ struct Lingo_lensApp: App {
                             insertion: .opacity.animation(.linear(duration: 0)),
                             removal: .opacity.animation(.easeOut(duration: 0.3))
                         ))
+                        .accessibilityLabel("Lingo Lens")
+                        .accessibilityHint("Translation app is loading")
                         .onAppear {
 
                             // Dismiss splash after minimal delay (faster app launch)

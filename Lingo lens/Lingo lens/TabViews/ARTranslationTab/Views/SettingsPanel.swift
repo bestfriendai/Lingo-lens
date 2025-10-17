@@ -98,7 +98,12 @@ struct SettingsPanel: View {
 }
 
 #Preview {
-    let arViewModel = ARViewModel()
+    createSettingsPanelPreview()
+}
+
+@MainActor
+private func createSettingsPanelPreview() -> some View {
+    let arViewModel = ARViewModel(dataPersistence: DataManager(), translationService: TranslationService())
     let settingsViewModel = SettingsViewModel()
     
     arViewModel.selectedLanguage = AvailableLanguage(

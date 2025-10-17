@@ -7,12 +7,13 @@
 
 import Foundation
 import Combine
+import Speech
 
 /// Protocol defining speech synthesis capabilities
 /// Enables dependency injection and testing with mock implementations
 /// @MainActor ensures speech operations happen on main thread (Swift 6 concurrency)
 @MainActor
-protocol SpeechManaging: AnyObject {
+protocol SpeechManaging: AnyObject, ObservableObject {
     
     /// Publisher for loading state
     var isLoadingPublisher: AnyPublisher<Bool, Never> { get }
@@ -71,15 +72,10 @@ protocol SpeechRecognizing: AnyObject {
 }
 
 /// Speech recognition authorization status
-enum SpeechRecognitionAuthorizationStatus {
-    case notDetermined
-    case denied
-    case restricted
-    case authorized
-}
+typealias SpeechRecognitionAuthorizationStatus = SFSpeechRecognizerAuthorizationStatus
 
 /// Protocol for managing error display and handling
-protocol ErrorManaging: AnyObject {
+protocol ErrorManaging: AnyObject, ObservableObject {
     /// Shows an error alert with an optional retry action
     /// - Parameters:
     ///   - message: The error message to display
@@ -103,18 +99,6 @@ protocol AppearanceManaging: AnyObject {
     
     /// Publisher for color scheme changes
     var colorSchemeOptionPublisher: AnyPublisher<AppearanceManager.ColorSchemeOption, Never> { get }
-}
-
-/// Protocol for object detection management
-protocol ObjectDetecting: AnyObject {
-    /// Starts object detection
-    func startDetection()
-    
-    /// Stops object detection
-    func stopDetection()
-    
-    /// Current detection state
-    var isDetectionActive: Bool { get }
 }
 
 /// Protocol for translation service

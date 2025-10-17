@@ -406,5 +406,5 @@ struct LanguageDownloadView: View {
         onDownloadComplete: {}
     )
     .environmentObject(TranslationService())
-    .environmentObject(AppearanceManager())
+    .environmentObject(AppearanceManager(dataPersistence: DataManager()))
 }

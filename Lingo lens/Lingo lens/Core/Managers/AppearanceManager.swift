@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 /// Manages the app's theme settings (light mode, dark mode, or system preference)
 /// and persists the user's choice between app launches
@@ -29,6 +30,15 @@ class AppearanceManager: ObservableObject, AppearanceManaging {
             case .system: return "System"
             case .light: return "Light"
             case .dark: return "Dark"
+            }
+        }
+        
+        // Localized display name for the settings UI
+        var localizedTitle: String {
+            switch self {
+            case .system: return "appearance.system".localized()
+            case .light: return "appearance.light".localized()
+            case .dark: return "appearance.dark".localized()
             }
         }
         

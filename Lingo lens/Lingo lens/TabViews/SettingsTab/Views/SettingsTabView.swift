@@ -29,13 +29,13 @@ struct SettingsTabView: View {
                 // MARK: - Translation Settings
 
                 // Language selection section
-                Section(header: Text("Translation")) {
+                Section(header: Text(localized: "settings.translation")) {
                     NavigationLink {
                         LanguageSelectionView(
                             selectedLanguage: $arViewModel.selectedLanguage)
                     } label: {
                         HStack {
-                            Text("Language")
+                            Text(localized: "settings.language")
                                 .foregroundStyle(.primary)
                             
                             Spacer()
@@ -46,49 +46,81 @@ struct SettingsTabView: View {
                         }
                         .padding(.trailing, 5)
                     }
-                    .accessibilityLabel("Select Translation Language")
-                    .accessibilityValue("Current language: \(arViewModel.selectedLanguage.localizedName())")
+                    .accessibilityLabel(localized: "settings.select_language")
+                    .accessibilityValue(localized: "settings.current_language", arguments: arViewModel.selectedLanguage.localizedName())
+                    .accessibilityAddTraits(.isButton)
+                }
+                
+                // MARK: - App Language Settings
+                
+                Section(header: Text(localized: "app.language")) {
+                    NavigationLink {
+                        AppLanguageSelectionView()
+                    } label: {
+                        HStack {
+                            Text(localized: "app.language")
+                                .foregroundStyle(.primary)
+                            
+                            Spacer()
+                            
+                            // Show currently selected app language
+                            Text(AppLanguageManager.shared.getLanguageDisplayName(for: AppLanguageManager.shared.currentLanguage))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.trailing, 5)
+                    }
+                    .accessibilityLabel("Select App Language")
+                    .accessibilityValue("Current app language: \(AppLanguageManager.shared.getLanguageDisplayName(for: AppLanguageManager.shared.currentLanguage))")
+                    .accessibilityAddTraits(.isButton)
                 }
                 
                 // MARK: - Appearance Settings
 
                 // Theme selection section (dark/light mode)
-                Section(header: Text("Appearance")) {
-                    Picker("Color Scheme", selection: $appearanceManager.colorSchemeOption) {
+                Section(header: Text(localized: "settings.appearance")) {
+                    Picker(localized: "settings.color_scheme", selection: $appearanceManager.colorSchemeOption) {
                         ForEach(AppearanceManager.ColorSchemeOption.allCases) { option in
                             HStack {
                                 
                                 // Show icon for each theme option
                                 Image(systemName: option.icon)
                                     .foregroundColor(iconColor(for: option))
-                                Text(option.title)
+                                    .accessibilityHidden(true)
+                                Text(option.localizedTitle)
                             }
                             .tag(option)
+                            .accessibilityLabel(option.localizedTitle)
+                            .accessibilityValue(option == appearanceManager.colorSchemeOption ? "Selected" : "")
+                            .accessibilityAddTraits(option == appearanceManager.colorSchemeOption ? .isSelected : [])
                         }
                     }
                     .pickerStyle(NavigationLinkPickerStyle())
-                    .accessibilityLabel("Choose Color Scheme")
-                    .accessibilityHint("Select between light mode, dark mode, or system default")
+                    .accessibilityLabel(localized: "settings.choose_color_scheme")
+                    .accessibilityHint(localized: "settings.color_scheme_hint")
+                    .accessibilityAddTraits(.isButton)
                 }
                 
                 // MARK: - About Section
 
                 // App version information
-                Section(header: Text("About")) {
+                Section(header: Text(localized: "settings.about")) {
                     HStack {
                         Image(systemName: "number")
                             .foregroundStyle(.blue)
-                        Text("Version")
+                            .accessibilityHidden(true)
+                        Text(localized: "settings.version")
                         Spacer()
                         Text("\(version) (\(build))")
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityLabel("App version \(version) build \(build)")
+                    .accessibilityAddTraits(.isStaticText)
                 }
             }
             .listStyle(InsetGroupedListStyle())
-            .navigationTitle("Settings")
+            .navigationTitle(localized: "settings.title")
+            .navigationViewStyle(StackNavigationViewStyle())
         }
-        .navigationViewStyle(StackNavigationViewStyle())
     }
     
     /// Returns an appropriate color for each theme option icon
@@ -106,7 +138,11 @@ struct SettingsTabView: View {
 }
 
 #Preview {
-    let arViewModel = ARViewModel()
+    createSettingsTabPreview()
+}
+
+private func createSettingsTabPreview() -> some View {
+    let arViewModel = ARViewModel(dataPersistence: DataManager(), translationService: TranslationService())
     arViewModel.selectedLanguage = AvailableLanguage(
         locale: Locale.Language(languageCode: "es", region: "ES")
     )
@@ -120,5 +156,5 @@ struct SettingsTabView: View {
     
     return SettingsTabView(arViewModel: arViewModel)
             .environmentObject(translationService)
-            .environmentObject(AppearanceManager())
+            .environmentObject(AppearanceManager(dataPersistence: DataManager()))
 }

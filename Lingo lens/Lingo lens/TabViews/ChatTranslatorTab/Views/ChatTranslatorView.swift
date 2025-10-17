@@ -18,6 +18,10 @@ struct ChatTranslatorView: View {
     @State private var showLanguageSelectionSheet = false
     @State private var isSelectingSourceLanguage = true
     @State private var scrollToBottom = false
+    
+    private var speechRecognitionManager: SpeechRecognizing {
+        diContainer.speechRecognitionManager
+    }
 
     init(translationService: TranslationService, diContainer: DIContainer) {
         _viewModel = StateObject(wrappedValue: diContainer.makeChatTranslatorViewModel())
@@ -50,30 +54,37 @@ struct ChatTranslatorView: View {
                     }
                 )
             }
-            .navigationTitle("Chat Translator")
+            .navigationTitle(localized: "chat.title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: { viewModel.clearMessages() }) {
-                            Label("Clear All", systemImage: "trash")
+                            Label(localized: "chat.clear_all", systemImage: "trash")
                         }
+                        .accessibilityLabel("Clear all messages")
+                        .accessibilityHint("Delete all conversation history")
                     } label: {
                         Image(systemName: "ellipsis.circle")
+                            .accessibilityLabel("More options")
+                            .accessibilityHint("Open menu with additional options")
                     }
                 }
             }
             .sheet(isPresented: $showLanguageSelectionSheet) {
                 languageSelectionSheet
             }
-            .alert("Translation Error", isPresented: $viewModel.showError) {
-                Button("OK", role: .cancel) {
+            .alert("chat.translation_error", isPresented: $viewModel.showError) {
+                Button("action.ok", role: .cancel) {
                     viewModel.errorMessage = nil
                     viewModel.showError = false
                 }
+                .accessibilityLabel("Dismiss error")
+                .accessibilityHint("Close the translation error alert")
             } message: {
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
+                        .accessibilityLabel("Error message: \(errorMessage)")
                 }
             }
             .overlay(alignment: .top) {
@@ -82,10 +93,13 @@ struct ChatTranslatorView: View {
                     HStack(spacing: 8) {
                         ProgressView()
                             .tint(.white)
-                        Text("Translating...")
+                            .accessibilityLabel("Translating")
+                            .accessibilityAddTraits(.updatesFrequently)
+                        Text("loading.translating")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundStyle(.white)
+                            .accessibilityLabel("Translating...")
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -155,7 +169,7 @@ struct ChatTranslatorView: View {
                 showLanguageSelectionSheet = true
             }) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("From")
+                    Text("chat.from")
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
@@ -176,6 +190,9 @@ struct ChatTranslatorView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Source language: \(viewModel.sourceLanguage.localizedName())")
+            .accessibilityHint("Tap to change source language")
+            .accessibilityAddTraits(.isButton)
 
             // Swap languages button with rotation animation
             Button(action: {
@@ -198,6 +215,9 @@ struct ChatTranslatorView: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Swap languages")
+            .accessibilityHint("Swap source and target languages")
+            .accessibilityAddTraits(.isButton)
 
             // Target language button
             Button(action: {
@@ -205,7 +225,7 @@ struct ChatTranslatorView: View {
                 showLanguageSelectionSheet = true
             }) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("To")
+                    Text("chat.to")
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
@@ -226,6 +246,9 @@ struct ChatTranslatorView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Target language: \(viewModel.targetLanguage.localizedName())")
+            .accessibilityHint("Tap to change target language")
+            .accessibilityAddTraits(.isButton)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -262,6 +285,8 @@ struct ChatTranslatorView: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                .accessibilityLabel("Delete message")
+                                .accessibilityHint("Remove this message from conversation")
                             }
                         }
                     }
@@ -312,11 +337,11 @@ struct ChatTranslatorView: View {
             }
 
             VStack(spacing: 10) {
-                Text("Start a Conversation")
+                Text("chat.start_conversation")
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("Type a message or use the microphone to translate speech in real-time")
+                Text("chat.start_conversation_description")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -327,22 +352,22 @@ struct ChatTranslatorView: View {
                 FeatureTip(
                     icon: "keyboard",
                     color: .blue,
-                    title: "Type to translate",
-                    description: "Enter any text and get instant translations"
+                    titleKey: "chat.type_to_translate",
+                    descriptionKey: "chat.type_to_translate_description"
                 )
 
                 FeatureTip(
                     icon: "mic.fill",
                     color: .green,
-                    title: "Speak naturally",
-                    description: "Tap the microphone to translate your voice"
+                    titleKey: "chat.speak_naturally",
+                    descriptionKey: "chat.speak_naturally_description"
                 )
 
                 FeatureTip(
                     icon: "speaker.wave.2.fill",
                     color: .orange,
-                    title: "Hear pronunciations",
-                    description: "Listen to translations in native accents"
+                    titleKey: "chat.hear_pronunciations",
+                    descriptionKey: "chat.hear_pronunciations_description"
                 )
             }
             .padding(.horizontal, 24)
@@ -393,14 +418,17 @@ struct ChatTranslatorView: View {
                 )
             }
             .listStyle(.insetGrouped)
-            .navigationTitle(isSelectingSourceLanguage ? "Source Language" : "Target Language")
+            .navigationTitle(isSelectingSourceLanguage ? "chat.source_language".localized() : "chat.target_language".localized())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                    Button("action.done".localized()) {
                         showLanguageSelectionSheet = false
                     }
                     .fontWeight(.semibold)
+                    .accessibilityLabel("Done")
+                    .accessibilityHint("Close language selection")
+                    .accessibilityAddTraits(.isButton)
                 }
             }
         }
@@ -414,8 +442,8 @@ struct ChatTranslatorView: View {
 struct FeatureTip: View {
     let icon: String
     let color: Color
-    let title: String
-    let description: String
+    let titleKey: String
+    let descriptionKey: String
 
     var body: some View {
         HStack(spacing: 12) {
@@ -435,12 +463,12 @@ struct FeatureTip: View {
                 )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(titleKey)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
 
-                Text(description)
+                Text(descriptionKey)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -458,6 +486,10 @@ struct FeatureTip: View {
 // MARK: - Preview
 
 #Preview {
+    createChatTranslatorPreview()
+}
+
+private func createChatTranslatorPreview() -> some View {
     let translationService = TranslationService()
     translationService.availableLanguages = [
         AvailableLanguage(locale: Locale.Language(languageCode: "es", region: "ES")),
@@ -465,7 +497,7 @@ struct FeatureTip: View {
         AvailableLanguage(locale: Locale.Language(languageCode: "de", region: "DE"))
     ]
 
-    let diContainer = DIContainer()
+    let diContainer = DIContainer.shared
     return ChatTranslatorView(translationService: translationService, diContainer: diContainer)
         .environmentObject(translationService)
         .environmentObject(diContainer)

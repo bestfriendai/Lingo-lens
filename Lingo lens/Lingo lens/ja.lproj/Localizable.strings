@@ -1,0 +1,218 @@
+/* 
+  Localizable.strings (Japanese)
+  Lingo lens
+
+  Created by Localization Implementation on 10/17/25.
+*/
+
+// MARK: - App General
+"app.name" = "Lingo Lens";
+"app.tagline" = "自然に言語を学ぶ";
+"app.author" = "Abhyas Mall による作成";
+"app.language" = "アプリ言語";
+
+// MARK: - Tab Bar
+"tab.translate" = "翻訳";
+"tab.chat" = "チャット";
+"tab.saved_words" = "保存された単語";
+"tab.settings" = "設定";
+
+// MARK: - Common Actions
+"action.ok" = "OK";
+"action.cancel" = "キャンセル";
+"action.done" = "完了";
+"action.save" = "保存";
+"action.delete" = "削除";
+"action.clear" = "クリア";
+"action.start" = "開始";
+"action.stop" = "停止";
+"action.retry" = "再試行";
+"action.open_settings" = "設定を開く";
+"action.close" = "閉じる";
+
+// MARK: - Loading States
+"loading.loading" = "読み込み中...";
+"loading.translating" = "翻訳中...";
+"loading.processing" = "処理中...";
+
+// MARK: - Camera & AR
+"camera.permission_required" = "カメラアクセスが必要です";
+"camera.permission_description" = "Lingo Lens は物体認識を通じて言語学習を支援するためにカメラアクセスが必要です。学習旅を始めるために設定でカメラアクセスを有効にしてください。";
+"camera.permission_accessibility" = "物体検出と翻訳にはカメラアクセスが必要です";
+"camera.open_settings" = "設定を開く";
+"camera.open_settings_hint" = "カメラアクセスを有効にするために iOS 設定を開きます";
+
+// AR Errors
+"ar.session_error" = "AR セッションエラー";
+"ar.tracking_lost" = "トラッキングが失われました";
+"ar.poor_environment" = "環境が悪いです";
+"ar.detection_failed" = "検出に失敗しました";
+"ar.model_error" = "モデルエラー";
+"ar.processing_failed" = "処理に失敗しました";
+
+"ar.session_failed" = "AR セッションで問題が発生しました：%@。もう一度お試しください。";
+"ar.tracking_lost_message" = "AR トラッキングが失われました。デバイスをゆっくり動かし、明るい場所に向けてください。";
+"ar.insufficient_features" = "視覚的特徴が十分に検出されませんでした。カメラをテクスチャのある表面に向けてください。";
+"ar.object_detection_failed" = "物体を検出できませんでした。検出ボックスを調整するか、別の物体に向けてみてください。";
+"ar.model_load_failed" = "物体検出モデルを読み込めませんでした。アプリが正常に機能しない可能性があります。";
+"ar.image_processing_failed" = "画像処理に失敗しました。もう一度お試しください。";
+
+// MARK: - Translation
+"translation.no_languages_title" = "利用可能な言語がありません";
+"translation.no_languages_message" = "現在、翻訳言語が利用できません。これはネットワーク接続の問題や Apple の翻訳サービスが利用できないことが原因である可能性があります。後でもう一度お試しいただくか、設定でデバイスの翻訳サービスが有効になっているか確認してください。";
+
+// Translation Errors
+"translation.not_ready" = "準備ができていません";
+"translation.timeout" = "タイムアウト";
+"translation.text_too_long" = "テキストが長すぎます";
+"translation.network_error" = "ネットワークエラー";
+"translation.invalid_language" = "無効な言語";
+"translation.error" = "翻訳エラー";
+
+"translation.session_not_ready" = "翻訳の準備がまだできていません。少しお待ちいただいてからもう一度お試しください。";
+"translation.timeout_message" = "翻訳に時間がかかりすぎています。インターネット接続を確認してもう一度お試しください。";
+"translation.text_too_long_message" = "テキストが長すぎます。最大5000文字までです。";
+"translation.network_error_message" = "インターネット接続がありません。インターネットに接続してもう一度お試しください。";
+"translation.invalid_language_message" = "選択された言語はサポートされていません。別の言語を選択してください。";
+"translation.unknown_error" = "翻訳に失敗しました：%@";
+
+// MARK: - Chat Translator
+"chat.title" = "チャット翻訳者";
+"chat.clear_all" = "すべてクリア";
+"chat.translation_error" = "翻訳エラー";
+"chat.from" = "から";
+"chat.to" = "へ";
+"chat.source_language" = "ソース言語";
+"chat.target_language" = "ターゲット言語";
+
+// Chat Empty State
+"chat.start_conversation" = "会話を始める";
+"chat.start_conversation_description" = "メッセージを入力するか、マイクを使用して音声をリアルタイムで翻訳してください";
+"chat.type_to_translate" = "入力して翻訳";
+"chat.type_to_translate_description" = "任意のテキストを入力して即座に翻訳を取得";
+"chat.speak_naturally" = "自然に話す";
+"chat.speak_naturally_description" = "マイクをタップして音声を翻訳";
+"chat.hear_pronunciations" = "発音を聞く";
+"chat.hear_pronunciations_description" = "ネイティブのアクセントで翻訳を聞く";
+
+// MARK: - Speech
+"speech.permission_needed" = "許可が必要です";
+"speech.recognition_failed" = "認識に失敗しました";
+"speech.no_voices" = "音声がありません";
+"speech.playback_failed" = "再生に失敗しました";
+"speech.audio_error" = "オーディオエラー";
+
+"speech.recognition_not_authorized" = "マイクアクセスが拒否されました。音声入力を使用するには設定で有効にしてください。";
+"speech.recognition_failed_message" = "音声を認識できませんでした：%@。もう一度お試しください。";
+"speech.synthesis_no_voices" = "この言語で利用可能な音声がありません。";
+"speech.synthesis_failed" = "オーディオを再生できませんでした：%@";
+"speech.audio_session_failed" = "オーディオシステムが利用できません。デバイス設定を確認してください。";
+
+// MARK: - Data Persistence
+"persistence.save_failed" = "保存に失敗しました";
+"persistence.load_failed" = "読み込みに失敗しました";
+"persistence.delete_failed" = "削除に失敗しました";
+"persistence.database_error" = "データベースエラー";
+
+"persistence.save_failure" = "保存できませんでした：%@";
+"persistence.fetch_failure" = "データを読み込めませんでした：%@";
+"persistence.delete_failure" = "削除できませんでした：%@";
+"persistence.store_load_failure" = "データベースを読み込めませんでした：%@。アプリを再起動してください。";
+
+// MARK: - Settings
+"settings.title" = "設定";
+"settings.translation" = "翻訳";
+"settings.language" = "言語";
+"settings.select_language" = "翻訳言語を選択";
+"settings.current_language" = "現在の言語：%@";
+"settings.appearance" = "外観";
+"settings.color_scheme" = "カラースキーム";
+"settings.choose_color_scheme" = "カラースキームを選択";
+"settings.color_scheme_hint" = "ライトモード、ダークモード、またはシステムデフォルトから選択";
+"settings.about" = "について";
+"settings.version" = "バージョン";
+
+// Color Scheme Options
+"appearance.system" = "システム";
+"appearance.light" = "ライト";
+"appearance.dark" = "ダーク";
+
+// MARK: - Onboarding
+"onboarding.start_learning" = "学習を始める";
+
+// Onboarding Pages
+"onboarding.translate_world_title" = "世界を翻訳する";
+"onboarding.translate_world_description" = "カメラを周囲の物体に向け、選択した言語に翻訳されるラベルを追加します。";
+
+"onboarding.interactive_learning_title" = "インタラクティブ学習";
+"onboarding.interactive_learning_description" = "ラベルをタップして翻訳を確認し、発音を聞き、単語を保存します。";
+
+"onboarding.build_vocabulary_title" = "語彙を構築する";
+"onboarding.build_vocabulary_description" = "すべての保存された翻訳は個人的なコレクションに整理されています。";
+
+"onboarding.select_language_title" = "言語を選択";
+"onboarding.select_language_description" = "設定から選択した言語を選択してください。";
+
+// MARK: - Saved Words
+"saved_words.title" = "保存された単語";
+"saved_words.empty_title" = "保存された単語がありません";
+"saved_words.empty_description" = "保存された翻訳がここに表示されます。翻訳を始めて語彙を構築しましょう！";
+"saved_words.filter_all" = "すべての言語";
+"saved_words.search_placeholder" = "保存された単語を検索...";
+"saved_words.delete_confirmation" = "翻訳を削除";
+"saved_words.delete_message" = "この翻訳を削除してもよろしいですか？";
+"saved_words.delete_button" = "削除";
+"saved_words.cancel_button" = "キャンセル";
+
+// MARK: - Language Selection
+"language.select_language" = "言語を選択";
+"language.download_required" = "ダウンロードが必要";
+"language.download_description" = "この言語は翻訳に追加データのダウンロードが必要です。";
+"language.download_button" = "ダウンロード";
+"language.downloading" = "ダウンロード中...";
+"language.download_complete" = "ダウンロード完了";
+
+// MARK: - Accessibility
+"accessibility.camera_view" = "物体検出用のカメラビュー";
+"accessibility.detection_label" = "検出された物体：%@";
+"accessibility.translation_label" = "翻訳：%@";
+"accessibility.play_pronunciation" = "発音を再生";
+"accessibility.save_translation" = "翻訳を保存";
+"accessibility.delete_translation" = "翻訳を削除";
+"accessibility.swap_languages" = "ソース言語とターゲット言語を交換";
+"accessibility.microphone_button" = "音声入力用のマイク";
+"accessibility.settings_button" = "設定";
+"accessibility.close_button" = "閉じる";
+
+// MARK: - Errors
+"error.generic_title" = "エラー";
+"error.generic_message" = "予期しないエラーが発生しました。もう一度お試しください。";
+"error.network_title" = "ネットワークエラー";
+"error.network_message" = "インターネット接続を確認してもう一度お試しください。";
+"error.permission_title" = "許可が必要です";
+"error.permission_message" = "設定で必要な許可を有効にしてください。";
+
+// MARK: - Instructions
+"instructions.title" = "使用方法";
+"instructions.step1_title" = "カメラを向ける";
+"instructions.step1_description" = "翻訳したい物体にカメラを向けてください。";
+
+"instructions.step2_title" = "物体を検出";
+"instructions.step2_description" = "アプリはカメラビューで物体を自動的に検出します。";
+
+"instructions.step3_title" = "タップして翻訳";
+"instructions.step3_description" = "検出された物体をタップして、選択した言語での翻訳を確認してください。";
+
+"instructions.step4_title" = "保存して学習";
+"instructions.step4_description" = "翻訳を保存して個人的な語彙を構築してください。";
+
+// MARK: - Date & Time Formatting
+"date.today" = "今日";
+"date.yesterday" = "昨日";
+"date.minutes_ago" = "%d分前";
+"date.hours_ago" = "%d時間前";
+"date.days_ago" = "%d日前";
+
+// MARK: - Plurals (for stringsdict)
+"items.count" = "%d項目";
+"translations.saved" = "%d個の保存された翻訳";

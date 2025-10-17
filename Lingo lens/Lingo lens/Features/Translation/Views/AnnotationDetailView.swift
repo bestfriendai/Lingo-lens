@@ -17,7 +17,7 @@ struct AnnotationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var viewContext
      
-    @EnvironmentObject var speechManager: SpeechManaging
+    @EnvironmentObject var speechManager: SpeechManager
 
     // Text from the tapped AR annotation
     let originalText: String
@@ -513,6 +513,11 @@ struct AnnotationDetailView: View {
 }
 
 #Preview("Sample Translation") {
+    createSampleTranslationPreview()
+}
+
+@MainActor
+private func createSampleTranslationPreview() -> some View {
     let translationService = TranslationService()
     translationService.translatedText = "Mesa"
     
@@ -525,7 +530,7 @@ struct AnnotationDetailView: View {
         targetLanguage: targetLanguage
     )
     .environmentObject(translationService)
-    .environmentObject(AppearanceManager())
+    .environmentObject(AppearanceManager(dataPersistence: DataManager()))
     .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
 
@@ -536,16 +541,20 @@ struct AnnotationDetailView: View {
         locale: .init(languageCode: "es", region: "ES")
     )
     
-    return AnnotationDetailView(
+    AnnotationDetailView(
         originalText: "Chair",
         targetLanguage: targetLanguage
     )
     .environmentObject(translationService)
-    .environmentObject(AppearanceManager())
+    .environmentObject(AppearanceManager(dataPersistence: DataManager()))
     .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
 
 #Preview("Translation Failed") {
+    createTranslationFailedPreview()
+}
+
+private func createTranslationFailedPreview() -> some View {
     let translationService = TranslationService()
     translationService.translatedText = "Translation failed. Try downloading the language."
     
@@ -558,6 +567,6 @@ struct AnnotationDetailView: View {
         targetLanguage: targetLanguage
     )
     .environmentObject(translationService)
-    .environmentObject(AppearanceManager())
+    .environmentObject(AppearanceManager(dataPersistence: DataManager()))
     .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }

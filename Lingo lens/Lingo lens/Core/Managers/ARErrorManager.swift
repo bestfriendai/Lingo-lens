@@ -40,7 +40,7 @@ class ARErrorManager: ObservableObject, ErrorManaging {
 struct ARErrorAlert: ViewModifier {
     
     // Observe the error manager to respond to its state changes
-    @ObservedObject var errorManager: ErrorManaging
+    @ObservedObject var errorManager: ARErrorManager
     
     func body(content: Content) -> some View {
         content
@@ -63,7 +63,7 @@ struct ARErrorAlert: ViewModifier {
 
 /// Convenience extension to apply AR error handling to any SwiftUI view
 extension View {
-    func withARErrorHandling(errorManager: ErrorManaging) -> some View {
+    func withARErrorHandling(errorManager: ARErrorManager) -> some View {
         self.modifier(ARErrorAlert(errorManager: errorManager))
     }
 }

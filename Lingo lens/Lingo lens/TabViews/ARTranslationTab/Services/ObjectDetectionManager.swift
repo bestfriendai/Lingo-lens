@@ -17,7 +17,7 @@ class ObjectDetectionManager: ObjectDetecting {
     
     // MARK: - Dependencies
     
-    private let errorManager: ErrorManaging
+    private let errorManager: any ErrorManaging
     
     // ML model loaded from bundle for image classification
     private var visionModel: VNCoreMLModel?
@@ -40,7 +40,7 @@ class ObjectDetectionManager: ObjectDetecting {
     /// Sets up the ML model when manager is created
     /// IMPROVED: Graceful fallback when no ML model is available
     /// Object detection feature will be disabled but app will still work for text translation
-    init(errorManager: ErrorManaging) {
+    init(errorManager: any ErrorManaging) {
         self.errorManager = errorManager
         // Configure image cache
         imageCache.countLimit = AppConstants.Performance.imageCacheSize
@@ -149,8 +149,8 @@ class ObjectDetectionManager: ObjectDetecting {
             // Make sure we have the ML model loaded
             guard let visionModel = self.visionModel else {
                 SecureLogger.logError("Object detection model not available")
-                DispatchQueue.main.async {
-                    errorManager.showError(
+                DispatchQueue.main.async { [self] in
+                    self.self.errorManager.showError(
                         message: "Object detection model is not available. Please restart the app.",
                         retryAction: nil
                     )
@@ -220,8 +220,8 @@ class ObjectDetectionManager: ObjectDetecting {
         // Convert CIImage to CGImage for Vision framework
         guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else {
             SecureLogger.logError("Failed to create CGImage from CIImage for object detection")
-            DispatchQueue.main.async {
-                errorManager.showError(
+            DispatchQueue.main.async { [self] in
+                self.self.errorManager.showError(
                     message: "Image processing failed. Please try again.",
                     retryAction: nil
                 )
@@ -281,7 +281,7 @@ class ObjectDetectionManager: ObjectDetecting {
             } catch {
                 SecureLogger.logError("Vision request failed", error: error)
                 DispatchQueue.main.async {
-                    errorManager.showError(
+                    self.errorManager.showError(
                         message: "Vision processing failed. Please try again.",
                         retryAction: nil
                     )

@@ -22,7 +22,7 @@ struct SavedTranslationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     
     // Speech manager to handle pronunciation
-    @EnvironmentObject var speechManager: SpeechManaging
+    @EnvironmentObject var speechManager: SpeechManager
     
     // MARK: - State Properties
     
@@ -258,6 +258,10 @@ struct SavedTranslationDetailView: View {
 }
 
 #Preview {
+    createSavedTranslationDetailPreview()
+}
+
+private func createSavedTranslationDetailPreview() -> some View {
     let viewContext = PersistenceController.preview.container.viewContext
     let translation = SavedTranslation(context: viewContext)
     translation.id = UUID()
@@ -268,4 +272,5 @@ struct SavedTranslationDetailView: View {
     translation.dateAdded = Date()
     
     return SavedTranslationDetailView(translation: translation)
+        .environmentObject(SpeechManager(errorManager: SpeechErrorManager()))
 }

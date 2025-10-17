@@ -95,7 +95,7 @@ struct SavedWords: View {
                     .cornerRadius(10)
             }
         }
-        .navigationTitle("Saved Words")
+        .navigationTitle("saved_words.title".localized())
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 toolbarButtons
@@ -124,7 +124,7 @@ struct SavedWords: View {
                 selectedLanguageCode = nil
             } label: {
                 HStack {
-                    Text("All Languages")
+                    Text(localized: "saved_words.filter_all")
                     if selectedLanguageCode == nil {
                         Spacer()
                         Image(systemName: "checkmark")

@@ -47,8 +47,11 @@ extension View {
     }
 }
 
-#Preview {
-    struct PreviewWrapper: View {
+#Preview("Error Alert") {
+    ErrorAlertModifier_PreviewWrapper()
+}
+
+struct ErrorAlertModifier_PreviewWrapper: View {
         @State private var error: AppError? = nil
         
         var body: some View {
@@ -67,7 +70,4 @@ extension View {
             }
             .errorAlert($error)
         }
-    }
-    
-    return PreviewWrapper()
 }

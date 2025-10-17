@@ -1,0 +1,218 @@
+/* 
+  Localizable.strings (French)
+  Lingo lens
+
+  Created by Localization Implementation on 10/17/25.
+*/
+
+// MARK: - App General
+"app.name" = "Lingo Lens";
+"app.tagline" = "Apprenez les langues naturellement";
+"app.author" = "Créé par Abhyas Mall";
+"app.language" = "Langue de l'App";
+
+// MARK: - Tab Bar
+"tab.translate" = "Traduire";
+"tab.chat" = "Chat";
+"tab.saved_words" = "Mots Sauvegardés";
+"tab.settings" = "Paramètres";
+
+// MARK: - Common Actions
+"action.ok" = "OK";
+"action.cancel" = "Annuler";
+"action.done" = "Terminé";
+"action.save" = "Enregistrer";
+"action.delete" = "Supprimer";
+"action.clear" = "Effacer";
+"action.start" = "Commencer";
+"action.stop" = "Arrêter";
+"action.retry" = "Réessayer";
+"action.open_settings" = "Ouvrir les Paramètres";
+"action.close" = "Fermer";
+
+// MARK: - Loading States
+"loading.loading" = "Chargement...";
+"loading.translating" = "Traduction...";
+"loading.processing" = "Traitement...";
+
+// MARK: - Camera & AR
+"camera.permission_required" = "Accès à la Caméra Requis";
+"camera.permission_description" = "Lingo Lens a besoin d'accès à la caméra pour vous aider à apprendre les langues grâce à la reconnaissance d'objets. Veuillez activer l'accès à la caméra dans les Paramètres pour commencer votre parcours d'apprentissage.";
+"camera.permission_accessibility" = "L'accès à la caméra est requis pour la détection d'objets et la traduction";
+"camera.open_settings" = "Ouvrir les Paramètres";
+"camera.open_settings_hint" = "Ouvre les paramètres iOS pour activer l'accès à la caméra";
+
+// AR Errors
+"ar.session_error" = "Erreur de Session AR";
+"ar.tracking_lost" = "Suivi Perdu";
+"ar.poor_environment" = "Mauvais Environnement";
+"ar.detection_failed" = "Détection Échouée";
+"ar.model_error" = "Erreur de Modèle";
+"ar.processing_failed" = "Traitement Échoué";
+
+"ar.session_failed" = "La session AR a rencontré un problème : %@. Veuillez réessayer.";
+"ar.tracking_lost_message" = "Le suivi AR a été perdu. Déplacez votre appareil lentement et pointez-le vers une zone bien éclairée.";
+"ar.insufficient_features" = "Pas assez de caractéristiques visuelles détectées. Pointez votre caméra vers une surface texturée.";
+"ar.object_detection_failed" = "Impossible de détecter des objets. Essayez d'ajuster la boîte de détection ou de pointer vers un objet différent.";
+"ar.model_load_failed" = "Impossible de charger le modèle de détection d'objets. L'application pourrait ne pas fonctionner correctement.";
+"ar.image_processing_failed" = "Le traitement d'image a échoué. Veuillez réessayer.";
+
+// MARK: - Translation
+"translation.no_languages_title" = "Aucune Langue Disponible";
+"translation.no_languages_message" = "Aucune langue de traduction n'est actuellement disponible. Cela peut être dû à des problèmes de connectivité réseau ou au fait que le service de traduction d'Apple ne soit pas disponible. Veuillez réessayer plus tard ou vérifier si les services de traduction de l'appareil sont activés dans les Paramètres.";
+
+// Translation Errors
+"translation.not_ready" = "Pas Prêt";
+"translation.timeout" = "Délai d'Attente Dépassé";
+"translation.text_too_long" = "Texte Trop Long";
+"translation.network_error" = "Erreur Réseau";
+"translation.invalid_language" = "Langue Invalide";
+"translation.error" = "Erreur de Traduction";
+
+"translation.session_not_ready" = "La traduction n'est pas encore prête. Veuillez attendre un moment et réessayer.";
+"translation.timeout_message" = "La traduction prend trop de temps. Vérifiez votre connexion internet et réessayez.";
+"translation.text_too_long_message" = "Le texte est trop long. Maximum 5000 caractères autorisés.";
+"translation.network_error_message" = "Pas de connexion internet. Veuillez vous connecter à internet et réessayer.";
+"translation.invalid_language_message" = "La langue sélectionnée n'est pas prise en charge. Veuillez choisir une langue différente.";
+"translation.unknown_error" = "La traduction a échoué : %@";
+
+// MARK: - Chat Translator
+"chat.title" = "Chat Traducteur";
+"chat.clear_all" = "Tout Effacer";
+"chat.translation_error" = "Erreur de Traduction";
+"chat.from" = "De";
+"chat.to" = "À";
+"chat.source_language" = "Langue Source";
+"chat.target_language" = "Langue Cible";
+
+// Chat Empty State
+"chat.start_conversation" = "Commencer une Conversation";
+"chat.start_conversation_description" = "Tapez un message ou utilisez le microphone pour traduire la parole en temps réel";
+"chat.type_to_translate" = "Tapez pour traduire";
+"chat.type_to_translate_description" = "Entrez n'importe quel texte et obtenez des traductions instantanées";
+"chat.speak_naturally" = "Parlez naturellement";
+"chat.speak_naturally_description" = "Appuyez sur le microphone pour traduire votre voix";
+"chat.hear_pronunciations" = "Entendre les Prononciations";
+"chat.hear_pronunciations_description" = "Écoutez les traductions avec des accents natifs";
+
+// MARK: - Speech
+"speech.permission_needed" = "Autorisation Requise";
+"speech.recognition_failed" = "Reconnaissance Échouée";
+"speech.no_voices" = "Pas de Voix";
+"speech.playback_failed" = "Lecture Échouée";
+"speech.audio_error" = "Erreur Audio";
+
+"speech.recognition_not_authorized" = "Accès au microphone refusé. Activez-le dans les Paramètres pour utiliser l'entrée vocale.";
+"speech.recognition_failed_message" = "Impossible de reconnaître la parole : %@. Veuillez réessayer.";
+"speech.synthesis_no_voices" = "Aucune voix de parole n'est disponible pour cette langue.";
+"speech.synthesis_failed" = "Impossible de lire l'audio : %@";
+"speech.audio_session_failed" = "Le système audio n'est pas disponible. Veuillez vérifier les paramètres de votre appareil.";
+
+// MARK: - Data Persistence
+"persistence.save_failed" = "Sauvegarde Échouée";
+"persistence.load_failed" = "Chargement Échoué";
+"persistence.delete_failed" = "Suppression Échouée";
+"persistence.database_error" = "Erreur de Base de Données";
+
+"persistence.save_failure" = "Impossible de sauvegarder : %@";
+"persistence.fetch_failure" = "Impossible de charger les données : %@";
+"persistence.delete_failure" = "Impossible de supprimer : %@";
+"persistence.store_load_failure" = "La base de données n'a pas pu charger : %@. Veuillez redémarrer l'application.";
+
+// MARK: - Settings
+"settings.title" = "Paramètres";
+"settings.translation" = "Traduction";
+"settings.language" = "Langue";
+"settings.select_language" = "Sélectionner la Langue de Traduction";
+"settings.current_language" = "Langue actuelle : %@";
+"settings.appearance" = "Apparence";
+"settings.color_scheme" = "Schéma de Couleurs";
+"settings.choose_color_scheme" = "Choisir le Schéma de Couleurs";
+"settings.color_scheme_hint" = "Sélectionner entre le mode clair, le mode sombre ou le défaut du système";
+"settings.about" = "À Propos";
+"settings.version" = "Version";
+
+// Color Scheme Options
+"appearance.system" = "Système";
+"appearance.light" = "Clair";
+"appearance.dark" = "Sombre";
+
+// MARK: - Onboarding
+"onboarding.start_learning" = "Commencer l'Apprentissage";
+
+// Onboarding Pages
+"onboarding.translate_world_title" = "Traduisez Votre Monde";
+"onboarding.translate_world_description" = "Pointez votre caméra vers les objets autour de vous, puis ajoutez des étiquettes qui se traduisent dans votre langue choisie.";
+
+"onboarding.interactive_learning_title" = "Apprentissage Interactif";
+"onboarding.interactive_learning_description" = "Appuyez sur les étiquettes pour voir les traductions, entendre les prononciations et sauvegarder des mots.";
+
+"onboarding.build_vocabulary_title" = "Construisez Votre Vocabulaire";
+"onboarding.build_vocabulary_description" = "Toutes les traductions sauvegardées sont organisées dans votre collection personnelle.";
+
+"onboarding.select_language_title" = "Sélectionner la Langue";
+"onboarding.select_language_description" = "Sélectionnez votre langue de choix depuis les paramètres.";
+
+// MARK: - Saved Words
+"saved_words.title" = "Mots Sauvegardés";
+"saved_words.empty_title" = "Aucun Mot Sauvegardé";
+"saved_words.empty_description" = "Vos traductions sauvegardées apparaîtront ici. Commencez à traduire pour construire votre vocabulaire !";
+"saved_words.filter_all" = "Toutes les Langues";
+"saved_words.search_placeholder" = "Rechercher des mots sauvegardés...";
+"saved_words.delete_confirmation" = "Supprimer la Traduction";
+"saved_words.delete_message" = "Êtes-vous sûr de vouloir supprimer cette traduction ?";
+"saved_words.delete_button" = "Supprimer";
+"saved_words.cancel_button" = "Annuler";
+
+// MARK: - Language Selection
+"language.select_language" = "Sélectionner la Langue";
+"language.download_required" = "Téléchargement Requis";
+"language.download_description" = "Cette langue nécessite le téléchargement de données supplémentaires pour la traduction.";
+"language.download_button" = "Télécharger";
+"language.downloading" = "Téléchargement...";
+"language.download_complete" = "Téléchargement Terminé";
+
+// MARK: - Accessibility
+"accessibility.camera_view" = "Vue caméra pour la détection d'objets";
+"accessibility.detection_label" = "Objet détecté : %@";
+"accessibility.translation_label" = "Traduction : %@";
+"accessibility.play_pronunciation" = "Lire la prononciation";
+"accessibility.save_translation" = "Sauvegarder la traduction";
+"accessibility.delete_translation" = "Supprimer la traduction";
+"accessibility.swap_languages" = "Échanger les langues source et cible";
+"accessibility.microphone_button" = "Microphone pour l'entrée vocale";
+"accessibility.settings_button" = "Paramètres";
+"accessibility.close_button" = "Fermer";
+
+// MARK: - Errors
+"error.generic_title" = "Erreur";
+"error.generic_message" = "Une erreur inattendue s'est produite. Veuillez réessayer.";
+"error.network_title" = "Erreur Réseau";
+"error.network_message" = "Veuillez vérifier votre connexion internet et réessayer.";
+"error.permission_title" = "Autorisation Requise";
+"error.permission_message" = "Veuillez activer les autorisations requises dans les Paramètres.";
+
+// MARK: - Instructions
+"instructions.title" = "Comment Utiliser";
+"instructions.step1_title" = "Pointez la Caméra";
+"instructions.step1_description" = "Pointez votre caméra vers les objets que vous voulez traduire.";
+
+"instructions.step2_title" = "Détecter les Objets";
+"instructions.step2_description" = "L'application détectera automatiquement les objets dans la vue caméra.";
+
+"instructions.step3_title" = "Appuyez pour Traduire";
+"instructions.step3_description" = "Appuyez sur les objets détectés pour voir les traductions dans votre langue choisie.";
+
+"instructions.step4_title" = "Sauvegarder et Apprendre";
+"instructions.step4_description" = "Sauvegardez les traductions pour construire votre vocabulaire personnel.";
+
+// MARK: - Date & Time Formatting
+"date.today" = "Aujourd'hui";
+"date.yesterday" = "Hier";
+"date.minutes_ago" = "il y a %d minutes";
+"date.hours_ago" = "il y a %d heures";
+"date.days_ago" = "il y a %d jours";
+
+// MARK: - Plurals (for stringsdict)
+"items.count" = "%d éléments";
+"translations.saved" = "%d traductions sauvegardées";

@@ -30,6 +30,7 @@ struct ControlBar: View {
                 Image(systemName: arViewModel.isWordTranslationMode ? "doc.text.fill" : "doc.text")
                     .font(.system(size: 16))
                     .foregroundColor(arViewModel.isWordTranslationMode ? .green : .gray)
+                    .accessibilityHidden(true)
 
                 Text(arViewModel.isWordTranslationMode ? "Word Translation: ON" : "Word Translation: OFF")
                     .font(.system(size: 13, weight: .semibold))
@@ -39,6 +40,11 @@ struct ControlBar: View {
 
                 Toggle("", isOn: $arViewModel.isWordTranslationMode)
                     .labelsHidden()
+                    .accessibilityLabel("Word Translation Mode")
+                    .accessibilityHint(arViewModel.isWordTranslationMode ? 
+                        "Turn off word translation mode" : 
+                        "Turn on word translation mode for instant text translation")
+                    .accessibilityAddTraits(.isButton)
                     .onChange(of: arViewModel.isWordTranslationMode) { oldValue, newValue in
                         if newValue {
                             // When enabling word translation, prepare language
@@ -109,6 +115,7 @@ struct ControlBar: View {
         }
         .accessibilityLabel("Label Settings")
         .accessibilityHint("Opens label settings panel to adjust label options")
+        .accessibilityAddTraits(.isButton)
         .frame(width: 60)
         .padding(.leading)
         .disabled(settingsViewModel.isExpanded)
@@ -139,8 +146,11 @@ struct ControlBar: View {
                     ProgressView()
                         .scaleEffect(0.7)
                         .tint(.white)
+                        .accessibilityLabel("Checking language availability")
+                        .accessibilityAddTraits(.updatesFrequently)
                     Text("Checking")
                         .font(.system(size: 16, weight: .semibold))
+                        .accessibilityLabel("Checking language availability")
                 }
                 .foregroundColor(.white)
                 .padding(12)
@@ -154,8 +164,11 @@ struct ControlBar: View {
                     ProgressView()
                         .scaleEffect(0.7)
                         .tint(.white)
+                        .accessibilityLabel("Preparing language for translation")
+                        .accessibilityAddTraits(.updatesFrequently)
                     Text("Preparing")
                         .font(.system(size: 16, weight: .semibold))
+                        .accessibilityLabel("Preparing language for translation")
                 }
                 .foregroundColor(.white)
                 .padding(12)
@@ -180,6 +193,7 @@ struct ControlBar: View {
         }
         .accessibilityLabel("Translate Item")
         .accessibilityHint("Shows detection box to identify and translate an object")
+        .accessibilityAddTraits(.isButton)
         .disabled(isCheckingLanguage || isPreparingLanguage)
     }
     
@@ -229,6 +243,7 @@ struct ControlBar: View {
                           "Adds a translation annotation for the detected object")
         .accessibilityValue(arViewModel.detectedObjectName.isEmpty ? "No object detected" :
                            "Ready to annotate \(arViewModel.detectedObjectName)")
+        .accessibilityAddTraits(.isButton)
     }
 
     // Determines button color based on state
@@ -357,10 +372,10 @@ struct ControlBar: View {
 }
 
 #Preview {
-    let arViewModel = ARViewModel()
+    let arViewModel = ARViewModel(dataPersistence: DataManager(), translationService: TranslationService())
     let settingsViewModel = SettingsViewModel()
     
-    return Group {
+    Group {
         
         ZStack {
             Color.black

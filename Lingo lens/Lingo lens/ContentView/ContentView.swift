@@ -48,37 +48,50 @@ struct ContentView: View {
             if let arViewModel = arViewModel {
                 ARTranslationView(arViewModel: arViewModel)
                 .tabItem {
-                    Label("Translate", systemImage: "camera.viewfinder")
+                    Label(localized: "tab.translate", systemImage: "camera.viewfinder")
                 }
                 .tag(Tab.arTranslationView)
                 .environmentObject(diContainer.speechManager)
+                .accessibilityLabel("AR Translation")
+                .accessibilityHint("Point camera at text to translate in real-time")
             } else {
                 // Loading view while ARViewModel initializes
-                ProgressView("Loading...")
+                ProgressView(localized: "loading.loading")
                     .tag(Tab.arTranslationView)
+                    .accessibilityLabel("Loading AR Translation")
+                    .accessibilityHint("Please wait while AR translation initializes")
             }
 
             ChatTranslatorView(translationService: translationService, diContainer: diContainer)
                 .tabItem {
-                    Label("Chat", systemImage: "bubble.left.and.bubble.right")
+                    Label(localized: "tab.chat", systemImage: "bubble.left.and.bubble.right")
                 }
                 .tag(Tab.chatTranslatorView)
+                .accessibilityLabel("Chat Translator")
+                .accessibilityHint("Translate text conversations and speech")
 
             SavedWords()
                 .tabItem {
-                    Label("Saved Words", systemImage: "bookmark.fill")
+                    Label(localized: "tab.saved_words", systemImage: "bookmark.fill")
                 }
                 .tag(Tab.savedWordsView)
                 .environmentObject(diContainer.speechManager)
+                .accessibilityLabel("Saved Words")
+                .accessibilityHint("View and manage your saved translations")
 
             SettingsTabView(arViewModel: arViewModel)
                 .tabItem {
-                    Label("Settings", systemImage: "gear")
+                    Label(localized: "tab.settings", systemImage: "gear")
                 }
                 .tag(Tab.settingsView)
+                .accessibilityLabel("Settings")
+                .accessibilityHint("Configure app preferences and languages")
         }
         .animation(.easeInOut(duration: 0.15), value: selectedTab)
         .withCoreDataErrorHandling()
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Main Navigation")
+        .accessibilityHint("Swipe left or right to navigate between tabs")
         
         .onReceive(translationService.$availableLanguages) { languages in
             if !languages.isEmpty {
@@ -89,10 +102,12 @@ struct ContentView: View {
             }
         }
         
-        .alert("No Languages Available", isPresented: $showNoLanguagesAlert) {
-            Button("OK", role: .cancel) { }
+        .alert(localized: "translation.no_languages_title", isPresented: $showNoLanguagesAlert) {
+            Button(localized: "action.ok", role: .cancel) { }
+                .accessibilityLabel("Dismiss alert")
+                .accessibilityHint("Close the no languages available alert")
         } message: {
-            Text("No translation languages are currently available. This may be due to network connectivity issues or Apple's translation service not being available. Please try again later or check if device translation services are enabled in Settings.")
+            Text(localized: "translation.no_languages_message")
         }
         
         .onChange(of: selectedTab) { oldValue, newValue in
@@ -123,9 +138,8 @@ struct ContentView: View {
             }
             
             // Track app launch and check onboarding status
-            if !Lingo_lensApp.didInitOnce {
-                diContainer.dataPersistence.trackAppLaunch()
-            }
+            // Note: Skipping the didInitOnce check as it's handled in the App struct
+            diContainer.dataPersistence.trackAppLaunch()
             
             // Check if onboarding should be shown
             if !diContainer.dataPersistence.didFinishOnBoarding() {
@@ -142,10 +156,9 @@ struct ContentView: View {
                 }
             }
         }
-
+        
         // When app becomes active again from background
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-
             // Prepare audio session if we're on a tab that needs it
             if selectedTab == .arTranslationView || selectedTab == .savedWordsView || selectedTab == .chatTranslatorView {
                 Task {
@@ -159,6 +172,11 @@ struct ContentView: View {
 // MARK: - Preview
 
 #Preview("Normal State") {
+    createNormalStatePreview()
+}
+
+@MainActor
+private func createNormalStatePreview() -> some View {
     let translationService = TranslationService()
     translationService.availableLanguages = [
         AvailableLanguage(locale: .init(languageCode: "es", region: "ES")),
@@ -168,19 +186,25 @@ struct ContentView: View {
     
     return ContentView()
         .environmentObject(translationService)
-        .environmentObject(AppearanceManager())
+        .environmentObject(AppearanceManager(dataPersistence: DataManager()))
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
 
 #Preview("Active Detection") {
+    createActiveDetectionPreview()
+}
+
+@MainActor
+private func createActiveDetectionPreview() -> some View {
     let translationService = TranslationService()
-    let arViewModel = ARViewModel()
+    let dataPersistence = DataManager()
+    let arViewModel = ARViewModel(dataPersistence: dataPersistence, translationService: translationService)
     arViewModel.isDetectionActive = true
     arViewModel.detectedObjectName = "Coffee Cup"
     arViewModel.adjustableROI = CGRect(x: 100, y: 100, width: 200, height: 200)
     
     return ContentView()
         .environmentObject(translationService)
-        .environmentObject(AppearanceManager())
+        .environmentObject(AppearanceManager(dataPersistence: dataPersistence))
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }

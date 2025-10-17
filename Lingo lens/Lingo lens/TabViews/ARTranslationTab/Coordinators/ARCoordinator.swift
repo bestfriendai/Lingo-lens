@@ -40,7 +40,7 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     private let textRecognitionManager: TextRecognitionManager
     
     // Error manager for handling AR errors
-    private let errorManager: ErrorManaging
+    private let errorManager: any ErrorManaging
 
     // Frame throttling for performance with thread-safe access
     private let processingLock = NSLock()
@@ -87,7 +87,7 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     init(arViewModel: ARViewModel,
          objectDetectionManager: ObjectDetecting,
          textRecognitionManager: TextRecognitionManager = TextRecognitionManager(),
-         errorManager: ErrorManaging) {
+         errorManager: any ErrorManaging) {
         self.arViewModel = arViewModel
         self.objectDetectionManager = objectDetectionManager
         self.textRecognitionManager = textRecognitionManager

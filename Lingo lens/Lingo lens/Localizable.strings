@@ -1,0 +1,218 @@
+/* 
+  Localizable.strings
+  Lingo lens
+
+  Created by Localization Implementation on 10/17/25.
+*/
+
+// MARK: - App General
+"app.name" = "Lingo Lens";
+"app.tagline" = "Learn languages naturally";
+"app.author" = "Created by Abhyas Mall";
+"app.language" = "App Language";
+
+// MARK: - Tab Bar
+"tab.translate" = "Translate";
+"tab.chat" = "Chat";
+"tab.saved_words" = "Saved Words";
+"tab.settings" = "Settings";
+
+// MARK: - Common Actions
+"action.ok" = "OK";
+"action.cancel" = "Cancel";
+"action.done" = "Done";
+"action.save" = "Save";
+"action.delete" = "Delete";
+"action.clear" = "Clear";
+"action.start" = "Start";
+"action.stop" = "Stop";
+"action.retry" = "Retry";
+"action.open_settings" = "Open Settings";
+"action.close" = "Close";
+
+// MARK: - Loading States
+"loading.loading" = "Loading...";
+"loading.translating" = "Translating...";
+"loading.processing" = "Processing...";
+
+// MARK: - Camera & AR
+"camera.permission_required" = "Camera Access Required";
+"camera.permission_description" = "Lingo Lens needs camera access to help you learn languages through object recognition. Please enable camera access in Settings to start your learning journey.";
+"camera.permission_accessibility" = "Camera access is required for object detection and translation";
+"camera.open_settings" = "Open Settings";
+"camera.open_settings_hint" = "Opens iOS Settings to enable camera access";
+
+// AR Errors
+"ar.session_error" = "AR Session Error";
+"ar.tracking_lost" = "Tracking Lost";
+"ar.poor_environment" = "Poor Environment";
+"ar.detection_failed" = "Detection Failed";
+"ar.model_error" = "Model Error";
+"ar.processing_failed" = "Processing Failed";
+
+"ar.session_failed" = "AR session encountered an issue: %@. Please try again.";
+"ar.tracking_lost_message" = "AR tracking was lost. Move your device slowly and point it at a well-lit area.";
+"ar.insufficient_features" = "Not enough visual features detected. Point your camera at a textured surface.";
+"ar.object_detection_failed" = "Could not detect any objects. Try adjusting the detection box or pointing at a different object.";
+"ar.model_load_failed" = "Could not load the object detection model. The app may not work properly.";
+"ar.image_processing_failed" = "Image processing failed. Please try again.";
+
+// MARK: - Translation
+"translation.no_languages_title" = "No Languages Available";
+"translation.no_languages_message" = "No translation languages are currently available. This may be due to network connectivity issues or Apple's translation service not being available. Please try again later or check if device translation services are enabled in Settings.";
+
+// Translation Errors
+"translation.not_ready" = "Not Ready";
+"translation.timeout" = "Timeout";
+"translation.text_too_long" = "Text Too Long";
+"translation.network_error" = "Network Error";
+"translation.invalid_language" = "Invalid Language";
+"translation.error" = "Translation Error";
+
+"translation.session_not_ready" = "Translation isn't ready yet. Please wait a moment and try again.";
+"translation.timeout_message" = "Translation is taking too long. Check your internet connection and try again.";
+"translation.text_too_long_message" = "Text is too long. Maximum 5000 characters allowed.";
+"translation.network_error_message" = "No internet connection. Please connect to the internet and try again.";
+"translation.invalid_language_message" = "The selected language is not supported. Please choose a different language.";
+"translation.unknown_error" = "Translation failed: %@";
+
+// MARK: - Chat Translator
+"chat.title" = "Chat Translator";
+"chat.clear_all" = "Clear All";
+"chat.translation_error" = "Translation Error";
+"chat.from" = "From";
+"chat.to" = "To";
+"chat.source_language" = "Source Language";
+"chat.target_language" = "Target Language";
+
+// Chat Empty State
+"chat.start_conversation" = "Start a Conversation";
+"chat.start_conversation_description" = "Type a message or use the microphone to translate speech in real-time";
+"chat.type_to_translate" = "Type to translate";
+"chat.type_to_translate_description" = "Enter any text and get instant translations";
+"chat.speak_naturally" = "Speak naturally";
+"chat.speak_naturally_description" = "Tap the microphone to translate your voice";
+"chat.hear_pronunciations" = "Hear pronunciations";
+"chat.hear_pronunciations_description" = "Listen to translations in native accents";
+
+// MARK: - Speech
+"speech.permission_needed" = "Permission Needed";
+"speech.recognition_failed" = "Recognition Failed";
+"speech.no_voices" = "No Voices";
+"speech.playback_failed" = "Playback Failed";
+"speech.audio_error" = "Audio Error";
+
+"speech.recognition_not_authorized" = "Microphone access denied. Enable it in Settings to use speech input.";
+"speech.recognition_failed_message" = "Could not recognize speech: %@. Please try again.";
+"speech.synthesis_no_voices" = "No speech voices are available for this language.";
+"speech.synthesis_failed" = "Could not play audio: %@";
+"speech.audio_session_failed" = "Audio system is not available. Please check your device settings.";
+
+// MARK: - Data Persistence
+"persistence.save_failed" = "Save Failed";
+"persistence.load_failed" = "Load Failed";
+"persistence.delete_failed" = "Delete Failed";
+"persistence.database_error" = "Database Error";
+
+"persistence.save_failure" = "Could not save: %@";
+"persistence.fetch_failure" = "Could not load data: %@";
+"persistence.delete_failure" = "Could not delete: %@";
+"persistence.store_load_failure" = "Database failed to load: %@. Please restart the app.";
+
+// MARK: - Settings
+"settings.title" = "Settings";
+"settings.translation" = "Translation";
+"settings.language" = "Language";
+"settings.select_language" = "Select Translation Language";
+"settings.current_language" = "Current language: %@";
+"settings.appearance" = "Appearance";
+"settings.color_scheme" = "Color Scheme";
+"settings.choose_color_scheme" = "Choose Color Scheme";
+"settings.color_scheme_hint" = "Select between light mode, dark mode, or system default";
+"settings.about" = "About";
+"settings.version" = "Version";
+
+// Color Scheme Options
+"appearance.system" = "System";
+"appearance.light" = "Light";
+"appearance.dark" = "Dark";
+
+// MARK: - Onboarding
+"onboarding.start_learning" = "Start Learning";
+
+// Onboarding Pages
+"onboarding.translate_world_title" = "Translate Your World";
+"onboarding.translate_world_description" = "Point your camera at objects around you, then add labels that translate to your chosen language.";
+
+"onboarding.interactive_learning_title" = "Interactive Learning";
+"onboarding.interactive_learning_description" = "Tap labels to see translations, hear pronunciations, and save words.";
+
+"onboarding.build_vocabulary_title" = "Build Your Vocabulary";
+"onboarding.build_vocabulary_description" = "All saved translations are organized in your personal collection.";
+
+"onboarding.select_language_title" = "Select Language";
+"onboarding.select_language_description" = "Select your language of choice from the settings.";
+
+// MARK: - Saved Words
+"saved_words.title" = "Saved Words";
+"saved_words.empty_title" = "No Saved Words";
+"saved_words.empty_description" = "Your saved translations will appear here. Start translating to build your vocabulary!";
+"saved_words.filter_all" = "All Languages";
+"saved_words.search_placeholder" = "Search saved words...";
+"saved_words.delete_confirmation" = "Delete Translation";
+"saved_words.delete_message" = "Are you sure you want to delete this translation?";
+"saved_words.delete_button" = "Delete";
+"saved_words.cancel_button" = "Cancel";
+
+// MARK: - Language Selection
+"language.select_language" = "Select Language";
+"language.download_required" = "Download Required";
+"language.download_description" = "This language requires downloading additional data for translation.";
+"language.download_button" = "Download";
+"language.downloading" = "Downloading...";
+"language.download_complete" = "Download Complete";
+
+// MARK: - Accessibility
+"accessibility.camera_view" = "Camera view for object detection";
+"accessibility.detection_label" = "Detected object: %@";
+"accessibility.translation_label" = "Translation: %@";
+"accessibility.play_pronunciation" = "Play pronunciation";
+"accessibility.save_translation" = "Save translation";
+"accessibility.delete_translation" = "Delete translation";
+"accessibility.swap_languages" = "Swap source and target languages";
+"accessibility.microphone_button" = "Microphone for speech input";
+"accessibility.settings_button" = "Settings";
+"accessibility.close_button" = "Close";
+
+// MARK: - Errors
+"error.generic_title" = "Error";
+"error.generic_message" = "An unexpected error occurred. Please try again.";
+"error.network_title" = "Network Error";
+"error.network_message" = "Please check your internet connection and try again.";
+"error.permission_title" = "Permission Required";
+"error.permission_message" = "Please enable the required permissions in Settings.";
+
+// MARK: - Instructions
+"instructions.title" = "How to Use";
+"instructions.step1_title" = "Point Camera";
+"instructions.step1_description" = "Point your camera at objects you want to translate.";
+
+"instructions.step2_title" = "Detect Objects";
+"instructions.step2_description" = "The app will automatically detect objects in the camera view.";
+
+"instructions.step3_title" = "Tap to Translate";
+"instructions.step3_description" = "Tap on detected objects to see translations in your chosen language.";
+
+"instructions.step4_title" = "Save & Learn";
+"instructions.step4_description" = "Save translations to build your personal vocabulary.";
+
+// MARK: - Date & Time Formatting
+"date.today" = "Today";
+"date.yesterday" = "Yesterday";
+"date.minutes_ago" = "%d minutes ago";
+"date.hours_ago" = "%d hours ago";
+"date.days_ago" = "%d days ago";
+
+// MARK: - Plurals (for stringsdict)
+"items.count" = "%d items";
+"translations.saved" = "%d saved translations";

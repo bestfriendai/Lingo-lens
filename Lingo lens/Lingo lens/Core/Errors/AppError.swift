@@ -43,29 +43,29 @@ enum TranslationError: AppError {
     
     var title: String {
         switch self {
-        case .sessionNotReady: return "Not Ready"
-        case .timeout: return "Timeout"
-        case .textTooLong: return "Text Too Long"
-        case .networkError: return "Network Error"
-        case .invalidLanguage: return "Invalid Language"
-        case .unknown: return "Translation Error"
+        case .sessionNotReady: return "translation.not_ready".localized()
+        case .timeout: return "translation.timeout".localized()
+        case .textTooLong: return "translation.text_too_long".localized()
+        case .networkError: return "translation.network_error".localized()
+        case .invalidLanguage: return "translation.invalid_language".localized()
+        case .unknown: return "translation.error".localized()
         }
     }
     
     var message: String {
         switch self {
         case .sessionNotReady:
-            return "Translation isn't ready yet. Please wait a moment and try again."
+            return "translation.session_not_ready".localized()
         case .timeout:
-            return "Translation is taking too long. Check your internet connection and try again."
+            return "translation.timeout_message".localized()
         case .textTooLong:
-            return "Text is too long. Maximum 5000 characters allowed."
+            return "translation.text_too_long_message".localized()
         case .networkError:
-            return "No internet connection. Please connect to the internet and try again."
+            return "translation.network_error_message".localized()
         case .invalidLanguage:
-            return "The selected language is not supported. Please choose a different language."
+            return "translation.invalid_language_message".localized()
         case .unknown(let msg):
-            return "Translation failed: \(msg)"
+            return "translation.unknown_error".localized(arguments: msg)
         }
     }
     
@@ -98,29 +98,29 @@ enum ARError: AppError {
     
     var title: String {
         switch self {
-        case .sessionFailed: return "AR Session Error"
-        case .trackingLost: return "Tracking Lost"
-        case .insufficientFeatures: return "Poor Environment"
-        case .objectDetectionFailed: return "Detection Failed"
-        case .modelLoadFailed: return "Model Error"
-        case .imageProcessingFailed: return "Processing Failed"
+        case .sessionFailed: return "ar.session_error".localized()
+        case .trackingLost: return "ar.tracking_lost".localized()
+        case .insufficientFeatures: return "ar.poor_environment".localized()
+        case .objectDetectionFailed: return "ar.detection_failed".localized()
+        case .modelLoadFailed: return "ar.model_error".localized()
+        case .imageProcessingFailed: return "ar.processing_failed".localized()
         }
     }
     
     var message: String {
         switch self {
         case .sessionFailed(let reason):
-            return "AR session encountered an issue: \(reason). Please try again."
+            return "ar.session_failed".localized(arguments: reason)
         case .trackingLost:
-            return "AR tracking was lost. Move your device slowly and point it at a well-lit area."
+            return "ar.tracking_lost_message".localized()
         case .insufficientFeatures:
-            return "Not enough visual features detected. Point your camera at a textured surface."
+            return "ar.insufficient_features".localized()
         case .objectDetectionFailed:
-            return "Could not detect any objects. Try adjusting the detection box or pointing at a different object."
+            return "ar.object_detection_failed".localized()
         case .modelLoadFailed:
-            return "Could not load the object detection model. The app may not work properly."
+            return "ar.model_load_failed".localized()
         case .imageProcessingFailed:
-            return "Image processing failed. Please try again."
+            return "ar.image_processing_failed".localized()
         }
     }
     
@@ -152,26 +152,26 @@ enum SpeechError: AppError {
     
     var title: String {
         switch self {
-        case .recognitionNotAuthorized: return "Permission Needed"
-        case .recognitionFailed: return "Recognition Failed"
-        case .synthesisNoVoices: return "No Voices"
-        case .synthesisFailed: return "Playback Failed"
-        case .audioSessionFailed: return "Audio Error"
+        case .recognitionNotAuthorized: return "speech.permission_needed".localized()
+        case .recognitionFailed: return "speech.recognition_failed".localized()
+        case .synthesisNoVoices: return "speech.no_voices".localized()
+        case .synthesisFailed: return "speech.playback_failed".localized()
+        case .audioSessionFailed: return "speech.audio_error".localized()
         }
     }
     
     var message: String {
         switch self {
         case .recognitionNotAuthorized:
-            return "Microphone access denied. Enable it in Settings to use speech input."
+            return "speech.recognition_not_authorized".localized()
         case .recognitionFailed(let reason):
-            return "Could not recognize speech: \(reason). Please try again."
+            return "speech.recognition_failed_message".localized(arguments: reason)
         case .synthesisNoVoices:
-            return "No speech voices are available for this language."
+            return "speech.synthesis_no_voices".localized()
         case .synthesisFailed(let reason):
-            return "Could not play audio: \(reason)"
+            return "speech.synthesis_failed".localized(arguments: reason)
         case .audioSessionFailed:
-            return "Audio system is not available. Please check your device settings."
+            return "speech.audio_session_failed".localized()
         }
     }
     
@@ -202,23 +202,23 @@ enum PersistenceError: AppError {
     
     var title: String {
         switch self {
-        case .saveFailure: return "Save Failed"
-        case .fetchFailure: return "Load Failed"
-        case .deleteFailure: return "Delete Failed"
-        case .storeLoadFailure: return "Database Error"
+        case .saveFailure: return "persistence.save_failed".localized()
+        case .fetchFailure: return "persistence.load_failed".localized()
+        case .deleteFailure: return "persistence.delete_failed".localized()
+        case .storeLoadFailure: return "persistence.database_error".localized()
         }
     }
     
     var message: String {
         switch self {
         case .saveFailure(let reason):
-            return "Could not save: \(reason)"
+            return "persistence.save_failure".localized(arguments: reason)
         case .fetchFailure(let reason):
-            return "Could not load data: \(reason)"
+            return "persistence.fetch_failure".localized(arguments: reason)
         case .deleteFailure(let reason):
-            return "Could not delete: \(reason)"
+            return "persistence.delete_failure".localized(arguments: reason)
         case .storeLoadFailure(let reason):
-            return "Database failed to load: \(reason). Please restart the app."
+            return "persistence.store_load_failure".localized(arguments: reason)
         }
     }
     

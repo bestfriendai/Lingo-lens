@@ -75,6 +75,9 @@ struct ChatInputBar: View {
                 .lineLimit(1...5)
                 .submitLabel(.send)
                 .disabled(speechRecognitionManager.isRecording)
+                .accessibilityLabel("Message input")
+                .accessibilityHint("Type your message here to translate")
+                .accessibilityValue(text.isEmpty ? "Empty" : text)
                 .onSubmit {
                     if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isOverLimit {
                         hapticFeedback(.light)
@@ -101,6 +104,9 @@ struct ChatInputBar: View {
                 }
                 .buttonStyle(.plain)
                 .transition(.scale.combined(with: .opacity))
+                .accessibilityLabel("Clear text")
+                .accessibilityHint("Clear the message input field")
+                .accessibilityAddTraits(.isButton)
             }
         }
         .padding(.horizontal, 14)
@@ -127,6 +133,9 @@ struct ChatInputBar: View {
                 .font(.caption2)
                 .foregroundStyle(isOverLimit ? .red : .orange)
                 .padding(.horizontal, 16)
+                .accessibilityLabel("Character count: \(characterCount) of \(characterLimit)")
+                .accessibilityHint(isOverLimit ? "Character limit exceeded" : "Characters remaining: \(characterLimit - characterCount)")
+                .accessibilityAddTraits(.updatesFrequently)
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
@@ -142,6 +151,8 @@ struct ChatInputBar: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel("Listening for speech")
+                    .accessibilityAddTraits(.updatesFrequently)
 
                 Spacer()
             }
@@ -186,6 +197,8 @@ struct ChatInputBar: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Color.blue.opacity(0.12))
                 )
+                .accessibilityLabel("Recognized speech: \(speechRecognitionManager.recognizedText)")
+                .accessibilityAddTraits(.updatesFrequently)
             Spacer()
         }
         .padding(.horizontal, 16)
@@ -267,6 +280,34 @@ struct ChatInputBar: View {
     private var textFieldBackground: Color {
         colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6)
     }
+    
+    // MARK: - Accessibility Helpers
+    
+    private func actionLabel(for icon: String) -> String {
+        switch icon {
+        case "mic.fill":
+            return "Start recording"
+        case "stop.fill":
+            return "Stop recording"
+        case "arrow.up":
+            return "Send message"
+        default:
+            return "Action button"
+        }
+    }
+    
+    private func actionHint(for icon: String) -> String {
+        switch icon {
+        case "mic.fill":
+            return "Tap to start speech recognition"
+        case "stop.fill":
+            return "Tap to stop recording and translate"
+        case "arrow.up":
+            return "Tap to send message for translation"
+        default:
+            return "Perform action"
+        }
+    }
 }
 
 // MARK: - Animated Action Button
@@ -296,11 +337,15 @@ struct AnimatedActionButton: View {
                 Image(systemName: icon)
                     .foregroundStyle(.white)
                     .font(.system(size: 18, weight: .semibold))
+                    .accessibilityHidden(true)
             }
             .scaleEffect(isPressed ? 0.88 : 1.0)
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
+        .accessibilityLabel("Action button")
+        .accessibilityHint("Tap to perform action")
+        .accessibilityAddTraits(.isButton)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
@@ -321,7 +366,7 @@ struct AnimatedActionButton: View {
 
 #Preview("Empty Input") {
     let diContainer = DIContainer.shared
-    return ChatInputBar(
+    ChatInputBar(
         text: .constant(""),
         speechRecognitionManager: diContainer.speechRecognitionManager,
         onSend: { print("Send") },
@@ -332,7 +377,7 @@ struct AnimatedActionButton: View {
 
 #Preview("With Text") {
     let diContainer = DIContainer.shared
-    return ChatInputBar(
+    ChatInputBar(
         text: .constant("Hello world!"),
         speechRecognitionManager: diContainer.speechRecognitionManager,
         onSend: { print("Send") },

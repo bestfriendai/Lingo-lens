@@ -8,6 +8,7 @@
 import SwiftUI
 import ARKit
 import SceneKit
+import Translation
 
 /// Manages translation overlay creation and positioning
 /// Handles both 2D overlays and 3D AR-anchored translations
@@ -26,7 +27,7 @@ class TranslationOverlayManager: ObservableObject {
     @Published var wordToTranslate: String?
 
     // Translation configuration for phrase translation mode
-    @Published var wordTranslationConfiguration: TranslationSession.Configuration?
+    @Published var wordTranslationConfiguration: String?
 
     // Queue of phrases pending translation
     @Published var pendingWordTranslations: [DetectedWord] = []
@@ -205,7 +206,7 @@ class TranslationOverlayManager: ObservableObject {
     
     /// Updates the translation configuration
     /// - Parameter configuration: The new translation configuration
-    func updateTranslationConfiguration(_ configuration: TranslationSession.Configuration?) {
+    func updateTranslationConfiguration(_ configuration: String?) {
         self.wordTranslationConfiguration = configuration
     }
     
