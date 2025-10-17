@@ -12,6 +12,7 @@ import SwiftUI
 
 /// Connects AR session events to the ARViewModel
 /// Handles camera frames, detects objects, and manages user interactions with AR annotations
+@MainActor
 class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
 
     // Reference to view model that holds AR state
@@ -33,10 +34,13 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     private var lastFrameTimestamp: TimeInterval = 0
 
     // Object detection logic is handled by separate manager (injected for testability)
-    private let objectDetectionManager: ObjectDetectionManager
+    private let objectDetectionManager: ObjectDetecting
 
     // Text recognition manager for automatic word detection
     private let textRecognitionManager: TextRecognitionManager
+    
+    // Error manager for handling AR errors
+    private let errorManager: ErrorManaging
 
     // Frame throttling for performance with thread-safe access
     private let processingLock = NSLock()
@@ -77,14 +81,17 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     /// Initializes coordinator with injected dependencies
     /// - Parameters:
     ///   - arViewModel: The AR view model to coordinate with
-    ///   - objectDetectionManager: Optional detection manager (defaults to new instance for backwards compatibility)
-    ///   - textRecognitionManager: Optional text recognition manager
+    ///   - objectDetectionManager: Detection manager for object detection
+    ///   - textRecognitionManager: Text recognition manager
+    ///   - errorManager: Error manager for handling AR errors
     init(arViewModel: ARViewModel,
-         objectDetectionManager: ObjectDetectionManager = ObjectDetectionManager(),
-         textRecognitionManager: TextRecognitionManager = TextRecognitionManager()) {
+         objectDetectionManager: ObjectDetecting,
+         textRecognitionManager: TextRecognitionManager = TextRecognitionManager(),
+         errorManager: ErrorManaging) {
         self.arViewModel = arViewModel
         self.objectDetectionManager = objectDetectionManager
         self.textRecognitionManager = textRecognitionManager
+        self.errorManager = errorManager
         super.init()
     }
     
@@ -102,11 +109,9 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         // Extract tracking state immediately to avoid retaining frame
         let currentTrackingState = frame.camera.trackingState
 
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            guard let arViewModel = self.arViewModel else { return }
+        guard let arViewModel = self.arViewModel else { return }
 
-            if arViewModel.isARSessionLoading {
+        if arViewModel.isARSessionLoading {
                 // Use extracted tracking state (not frame.camera.trackingState)
                 switch currentTrackingState {
                     
@@ -165,12 +170,11 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
                     }
                 }
             }
-        }
-
-        // Process frames on main actor to access UI properties safely
-        Task { @MainActor [weak self] in
+            
+            // Process frames on main actor to access UI properties safely
+            Task { [weak self] in
             guard let self = self else { return }
-
+            
             // Process frames when EITHER object detection OR word translation is active
             guard let arViewModel = self.arViewModel,
                   let sceneView = arViewModel.sceneView,
@@ -179,82 +183,88 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
             // Google Translate mode: No need to update overlay positions
             // Overlays are updated when new text is detected, not every frame
 
-        // Get the raw camera image and orientation (needed for both modes)
-        let pixelBuffer = frame.capturedImage
-        let deviceOrientation = UIDevice.current.orientation
-        let exifOrientation = deviceOrientation.exifOrientation
-        let screenWidth = sceneView.bounds.width
-        let screenHeight = sceneView.bounds.height
+            // Get the raw camera image and orientation (needed for both modes)
+            let pixelBuffer = frame.capturedImage
+            let deviceOrientation = UIDevice.current.orientation
+            let exifOrientation = deviceOrientation.exifOrientation
+            let screenWidth = sceneView.bounds.width
+            let screenHeight = sceneView.bounds.height
 
-        // OBJECT DETECTION MODE - Process detection box area for TEXT
-        // NOTE: Using TEXT recognition instead of object detection since ML model was removed
-        // This is actually MORE useful - users can point at text and get instant translation!
-        if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
-            // Skip if already processing or not enough time has passed
-            let detectionTime = frame.timestamp
-            guard !isProcessingFrame,
-                  (detectionTime - lastDetectionTime) >= detectionInterval else {
-                return
-            }
+            // OBJECT DETECTION MODE - Process detection box area for TEXT
+            // NOTE: Using TEXT recognition instead of object detection since ML model was removed
+            // This is actually MORE useful - users can point at text and get instant translation!
+            if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
+                // Skip if already processing or not enough time has passed
+                let detectionTime = frame.timestamp
+                guard !isProcessingFrame,
+                      (detectionTime - lastDetectionTime) >= detectionInterval else {
+                    return
+                }
 
-            // Mark as processing
-            self.isProcessingFrame = true
-            self.lastDetectionTime = detectionTime
+                // Mark as processing
+                isProcessingFrame = true
+                lastDetectionTime = detectionTime
 
-            // Safety timeout
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                guard let self = self else { return }
-                if self.isProcessingFrame {
-                    self.isProcessingFrame = false
+                // Safety timeout
+                Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                    guard let self = self else { return }
+                    if self.isProcessingFrame {
+                        self.isProcessingFrame = false
+                    }
+                }
+
+                // Convert screen ROI to normalized coordinates
+                let roi = arViewModel.adjustableROI
+                var nx = roi.origin.x / screenWidth
+                var ny = 1.0 - ((roi.origin.y + roi.height) / screenHeight)
+                var nw = roi.width  / screenWidth
+                var nh = roi.height / screenHeight
+
+                // Clamp to valid range
+                if nx < 0 { nx = 0 }
+                if ny < 0 { ny = 0 }
+                if nx + nw > 1 { nw = 1 - nx }
+                if ny + nh > 1 { nh = 1 - ny }
+
+                let normalizedROI = CGRect(x: nx, y: ny, width: nw, height: nh)
+
+                // Process TEXT recognition in ROI (improved - detects text instead of objects)
+                Task {
+                    await self.processTextInROI(pixelBuffer: pixelBuffer,
+                                              exifOrientation: exifOrientation,
+                                              normalizedROI: normalizedROI)
                 }
             }
 
-            // Convert screen ROI to normalized coordinates
-            let roi = arViewModel.adjustableROI
-            var nx = roi.origin.x / screenWidth
-            var ny = 1.0 - ((roi.origin.y + roi.height) / screenHeight)
-            var nw = roi.width  / screenWidth
-            var nh = roi.height / screenHeight
-
-            // Clamp to valid range
-            if nx < 0 { nx = 0 }
-            if ny < 0 { ny = 0 }
-            if nx + nw > 1 { nw = 1 - nx }
-            if ny + nh > 1 { nh = 1 - ny }
-
-            let normalizedROI = CGRect(x: nx, y: ny, width: nw, height: nh)
-
-            // Process TEXT recognition in ROI (improved - detects text instead of objects)
-            self.processTextInROI(pixelBuffer: pixelBuffer,
-                                 exifOrientation: exifOrientation,
-                                 normalizedROI: normalizedROI)
-        }
-
-        // WORD TRANSLATION MODE - Process full frame for text
-        if arViewModel.isWordTranslationMode {
-            // Skip if already processing or not enough time has passed
-            let textRecognitionTime = frame.timestamp
-            guard !isProcessingText,
-                  (textRecognitionTime - lastTextRecognitionTime) >= textRecognitionInterval else {
-                return
-            }
-
-            // Mark as processing
-            self.isProcessingText = true
-            self.lastTextRecognitionTime = textRecognitionTime
-
-            // Safety timeout
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-                guard let self = self else { return }
-                if self.isProcessingText {
-                    self.isProcessingText = false
+            // WORD TRANSLATION MODE - Process full frame for text
+            if arViewModel.isWordTranslationMode {
+                // Skip if already processing or not enough time has passed
+                let textRecognitionTime = frame.timestamp
+                guard !isProcessingText,
+                      (textRecognitionTime - lastTextRecognitionTime) >= textRecognitionInterval else {
+                    return
                 }
-            }
 
-            // Process full-frame word translation
-            self.processWordTranslation(pixelBuffer: pixelBuffer,
-                                       exifOrientation: exifOrientation,
-                                       screenSize: CGSize(width: screenWidth, height: screenHeight))
+                // Mark as processing
+                isProcessingText = true
+                lastTextRecognitionTime = textRecognitionTime
+
+                // Safety timeout
+                Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+                    guard let self = self else { return }
+                    if self.isProcessingText {
+                        self.isProcessingText = false
+                    }
+                }
+
+                // Process full-frame word translation
+                Task {
+                    await self.processWordTranslation(pixelBuffer: pixelBuffer,
+                                                    exifOrientation: exifOrientation,
+                                                    screenSize: CGSize(width: screenWidth, height: screenHeight))
+                }
             }
         }
     }
@@ -263,27 +273,28 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     func session(_ session: ARSession, didFailWithError error: Error) {
         print("❌ AR session error: \(error.localizedDescription)")
 
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
             guard self.arViewModel != nil else { return }
 
             // Small delay to avoid alert showing too quickly during normal transitions
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                ARErrorManager.shared.showError(
-                    message: "AR camera session encountered an issue. Please try again.",
-                    retryAction: { [weak self] in
-                        guard let self = self else { return }
-                        guard let arViewModel = self.arViewModel else { return }
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            
+            errorManager.showError(
+                message: "AR camera session encountered an issue. Please try again.",
+                retryAction: { [weak self] in
+                    guard let self = self else { return }
+                    guard let arViewModel = self.arViewModel else { return }
 
-                        // Try restarting the AR session if user taps retry
-                        arViewModel.pauseARSession()
+                    // Try restarting the AR session if user taps retry
+                    arViewModel.pauseARSession()
 
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            arViewModel.resumeARSession()
-                        }
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                        arViewModel.resumeARSession()
                     }
-                )
-            }
+                }
+            )
         }
     }
     
@@ -296,7 +307,8 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
 
         // Safety timeout to prevent stuck detection state
         let detectionStartTime = Date()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
             guard let self = self else { return }
             if self.isProcessingFrame && Date().timeIntervalSince(detectionStartTime) >= 1.0 {
                 SecureLogger.logError("Detection timeout - resetting isProcessingFrame")
@@ -310,9 +322,7 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
             exifOrientation: exifOrientation,
             normalizedROI: normalizedROI
         ) { [weak self] result in
-
-            // Update the UI with detection result on main thread using weak self
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 guard let self = self else { return }
                 guard let arViewModel = self.arViewModel else { return }
                 arViewModel.detectedObjectName = result ?? ""
@@ -326,11 +336,10 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     /// This replaces object detection and is more useful for translation!
     private func processTextInROI(pixelBuffer: CVPixelBuffer,
                                   exifOrientation: CGImagePropertyOrientation,
-                                  normalizedROI: CGRect) {
-
+                                  normalizedROI: CGRect) async {
         // Safety timeout to prevent stuck detection state
         let detectionStartTime = Date()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
             if self.isProcessingFrame && Date().timeIntervalSince(detectionStartTime) >= 1.0 {
                 SecureLogger.logError("Text recognition timeout - resetting isProcessingFrame")
@@ -339,32 +348,39 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         }
 
         // Send the ROI to text recognition manager
-        textRecognitionManager.recognizeTextInROI(
-            pixelBuffer: pixelBuffer,
-            exifOrientation: exifOrientation,
-            normalizedROI: normalizedROI
-        ) { [weak self] detectedWords in
+        await withCheckedContinuation { continuation in
+            textRecognitionManager.recognizeTextInROI(
+                pixelBuffer: pixelBuffer,
+                exifOrientation: exifOrientation,
+                normalizedROI: normalizedROI
+            ) { [weak self] detectedWords in
+                Task { @MainActor in
+                    guard let self = self else { 
+                        continuation.resume()
+                        return 
+                    }
+                    guard let arViewModel = self.arViewModel else { 
+                        continuation.resume()
+                        return 
+                    }
 
-            // Update the UI with detected text on main thread
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                guard let arViewModel = self.arViewModel else { return }
+                    // Combine all detected text into a single string for display
+                    let detectedText = detectedWords
+                        .map { $0.text }
+                        .joined(separator: " ")
 
-                // Combine all detected text into a single string for display
-                let detectedText = detectedWords
-                    .map { $0.text }
-                    .joined(separator: " ")
+                    arViewModel.detectedObjectName = detectedText.isEmpty ? "" : detectedText
 
-                arViewModel.detectedObjectName = detectedText.isEmpty ? "" : detectedText
+                    #if DEBUG
+                    if !detectedText.isEmpty {
+                        SecureLogger.log("📝 Detected text in ROI: \"\(detectedText)\"", level: .info)
+                    }
+                    #endif
 
-                #if DEBUG
-                if !detectedText.isEmpty {
-                    SecureLogger.log("📝 Detected text in ROI: \"\(detectedText)\"", level: .info)
+                    // Reset processing flag to allow next detection
+                    self.isProcessingFrame = false
+                    continuation.resume()
                 }
-                #endif
-
-                // Reset processing flag to allow next detection
-                self.isProcessingFrame = false
             }
         }
     }
@@ -372,11 +388,10 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     /// Processes full-frame word translation for restaurant menu use case
     private func processWordTranslation(pixelBuffer: CVPixelBuffer,
                                        exifOrientation: CGImagePropertyOrientation,
-                                       screenSize: CGSize) {
-
+                                       screenSize: CGSize) async {
         // Safety timeout to prevent stuck text recognition state
         let recognitionStartTime = Date()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
             if self.isProcessingText && Date().timeIntervalSince(recognitionStartTime) >= 2.0 {
                 SecureLogger.logError("Text recognition timeout - resetting isProcessingText")
@@ -385,46 +400,52 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
         }
 
         // Send the entire frame to text recognition manager
-        textRecognitionManager.recognizeAllText(
-            pixelBuffer: pixelBuffer,
-            exifOrientation: exifOrientation
-        ) { [weak self] detectedWords in
-
-            // Update the UI with detected words on main thread using weak self
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                guard let arViewModel = self.arViewModel else { return }
-
-                // Update detected words
-                arViewModel.detectedWords = detectedWords
-
-                // Google Translate mode: Process ALL confident text, no artificial limits
-                var seenPhraseTexts = Set<String>()
-
-                let confidentPhrases = detectedWords
-                    .filter { $0.isConfident }
-                    .filter { phrase in
-                        let lowercased = phrase.text.lowercased()
-                        if seenPhraseTexts.contains(lowercased) {
-                            return false
-                        }
-                        seenPhraseTexts.insert(lowercased)
-                        return true
+        await withCheckedContinuation { continuation in
+            textRecognitionManager.recognizeAllText(
+                pixelBuffer: pixelBuffer,
+                exifOrientation: exifOrientation
+            ) { [weak self] detectedWords in
+                Task { @MainActor in
+                    guard let self = self else { 
+                        continuation.resume()
+                        return 
                     }
-                    .sorted { $0.confidence > $1.confidence }
-                arViewModel.pendingWordTranslations = Array(confidentPhrases)
+                    guard let arViewModel = self.arViewModel else { 
+                        continuation.resume()
+                        return 
+                    }
 
-                print("📝 Detected \(detectedWords.count) phrases, queuing \(confidentPhrases.count) for translation")
+                    // Update detected words
+                    arViewModel.detectedWords = detectedWords
 
-                // Reset processing flag to allow next recognition
-                self.isProcessingText = false
+                    // Google Translate mode: Process ALL confident text, no artificial limits
+                    var seenPhraseTexts = Set<String>()
+
+                    let confidentPhrases = detectedWords
+                        .filter { $0.isConfident }
+                        .filter { phrase in
+                            let lowercased = phrase.text.lowercased()
+                            if seenPhraseTexts.contains(lowercased) {
+                                return false
+                            }
+                            seenPhraseTexts.insert(lowercased)
+                            return true
+                        }
+                        .sorted { $0.confidence > $1.confidence }
+                    arViewModel.pendingWordTranslations = Array(confidentPhrases)
+
+                    print("📝 Detected \(detectedWords.count) phrases, queuing \(confidentPhrases.count) for translation")
+
+                    // Reset processing flag to allow next recognition
+                    self.isProcessingText = false
+                    continuation.resume()
+                }
             }
         }
     }
 
     /// Updates the loading message only if it's different from current message
     /// Prevents unnecessary UI updates when message hasn't changed
-    @MainActor
     private func updateLoadingMessage(_ message: String) {
         guard let arViewModel = self.arViewModel else { return }
         if arViewModel.loadingMessage != message {
@@ -436,7 +457,6 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
 
     /// Handles taps on AR annotations
     /// Uses hit-testing to determine which annotation was tapped
-    @MainActor
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         guard let arViewModel = arViewModel,
               let sceneView = arViewModel.sceneView else { return }
@@ -513,7 +533,6 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     }
     
     /// Handles long press on annotations to show delete dialog
-    @MainActor
     @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         guard let arViewModel = arViewModel,
               let sceneView = arViewModel.sceneView,

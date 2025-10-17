@@ -9,12 +9,9 @@ import Speech
 import AVFoundation
 import SwiftUI
 
-/// Singleton manager for handling speech recognition (speech-to-text)
+/// Manager for handling speech recognition (speech-to-text)
 /// Converts spoken words into text for translation
-class SpeechRecognitionManager: NSObject, ObservableObject {
-
-    // Shared instance for whole app to use
-    static let shared = SpeechRecognitionManager()
+class SpeechRecognitionManager: NSObject, ObservableObject, SpeechRecognizing {
 
     // MARK: - Published Properties
 
@@ -46,7 +43,7 @@ class SpeechRecognitionManager: NSObject, ObservableObject {
 
     // MARK: - Initialization
 
-    private override init() {
+    override init() {
         super.init()
         // Initialize with English by default
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))

@@ -10,22 +10,6 @@ import SwiftUI
 @main
 struct Lingo_lensApp: App {
     
-    init() {
-
-        //  If app was not initialized already, only then we call
-        //  DataManager.shared.trackAppLaunch() to increment the
-        //  launch count
-        if !Self.didInitOnce {
-            Self.didInitOnce = true
-
-            // Track the app launch only the first time this
-            // SwiftUI app struct is created in a truly fresh run:
-            DataManager.shared.trackAppLaunch()
-
-            SecureLogger.log("App initializing", level: .info)
-        }
-    }
-    
     // MARK: - Properties
 
     //  Track if the app initialized
@@ -35,10 +19,21 @@ struct Lingo_lensApp: App {
     @StateObject private var diContainer = DIContainer.shared
 
     // Track whether to show onboarding
-    @State private var showOnboarding = DataManager.shared.didFinishOnBoarding() ? false : true
+    @State private var showOnboarding = true
 
     // Add state for showing splash screen
     @State private var showSplashScreen = true
+
+    // MARK: - Initialization
+    
+    init() {
+        // Note: We can't access @StateObject here, so we'll track app launch
+        // in the onAppear modifier of the ContentView
+        if !Self.didInitOnce {
+            Self.didInitOnce = true
+            SecureLogger.log("App initializing", level: .info)
+        }
+    }
 
     // MARK: - Body
 
@@ -54,7 +49,7 @@ struct Lingo_lensApp: App {
                         
                         OnboardingView {
                             showOnboarding = false
-                            DataManager.shared.finishOnBoarding()
+                            diContainer.dataPersistence.finishOnBoarding()
                         }
                         .preferredColorScheme(diContainer.appearanceManager.colorSchemeOption.colorScheme)
                         

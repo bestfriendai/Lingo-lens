@@ -77,3 +77,56 @@ enum SpeechRecognitionAuthorizationStatus {
     case restricted
     case authorized
 }
+
+/// Protocol for managing error display and handling
+protocol ErrorManaging: AnyObject {
+    /// Shows an error alert with an optional retry action
+    /// - Parameters:
+    ///   - message: The error message to display
+    ///   - retryAction: Optional closure that will execute if user taps "Try Again"
+    func showError(message: String, retryAction: (() -> Void)?)
+    
+    /// Publisher for error alert state
+    var showErrorAlert: Bool { get }
+    
+    /// Current error message
+    var errorMessage: String { get }
+    
+    /// Optional retry action
+    var retryAction: (() -> Void)? { get }
+}
+
+/// Protocol for managing appearance settings
+protocol AppearanceManaging: AnyObject {
+    /// Current color scheme option
+    var colorSchemeOption: AppearanceManager.ColorSchemeOption { get set }
+    
+    /// Publisher for color scheme changes
+    var colorSchemeOptionPublisher: AnyPublisher<AppearanceManager.ColorSchemeOption, Never> { get }
+}
+
+/// Protocol for object detection management
+protocol ObjectDetecting: AnyObject {
+    /// Starts object detection
+    func startDetection()
+    
+    /// Stops object detection
+    func stopDetection()
+    
+    /// Current detection state
+    var isDetectionActive: Bool { get }
+}
+
+/// Protocol for translation service
+protocol TranslationServicing: AnyObject {
+    /// Available languages for translation
+    var availableLanguages: [AvailableLanguage] { get }
+    
+    /// Translates text from source to target language
+    /// - Parameters:
+    ///   - text: Text to translate
+    ///   - source: Source language
+    ///   - target: Target language
+    /// - Returns: Translated text
+    func translate(text: String, from source: AvailableLanguage, to target: AvailableLanguage) async throws -> String
+}

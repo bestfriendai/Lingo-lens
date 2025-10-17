@@ -13,7 +13,11 @@ import ImageIO
 
 /// Handles object detection using Vision framework and FastViT model
 /// Takes camera frames from AR session and identifies objects within user-defined regions
-class ObjectDetectionManager {
+class ObjectDetectionManager: ObjectDetecting {
+    
+    // MARK: - Dependencies
+    
+    private let errorManager: ErrorManaging
     
     // ML model loaded from bundle for image classification
     private var visionModel: VNCoreMLModel?
@@ -36,7 +40,8 @@ class ObjectDetectionManager {
     /// Sets up the ML model when manager is created
     /// IMPROVED: Graceful fallback when no ML model is available
     /// Object detection feature will be disabled but app will still work for text translation
-    init() {
+    init(errorManager: ErrorManaging) {
+        self.errorManager = errorManager
         // Configure image cache
         imageCache.countLimit = AppConstants.Performance.imageCacheSize
         imageCache.totalCostLimit = 50 * 1024 * 1024  // 50MB max
@@ -48,6 +53,24 @@ class ObjectDetectionManager {
         // The app will still work for text translation (primary feature)
         // Object detection mode will show a message that the feature is unavailable
         visionModel = nil
+    }
+    
+    // MARK: - ObjectDetecting Protocol
+    
+    /// Starts object detection
+    func startDetection() {
+        // Implementation would start detection process
+    }
+    
+    /// Stops object detection
+    func stopDetection() {
+        // Implementation would stop detection process
+    }
+    
+    /// Current detection state
+    var isDetectionActive: Bool {
+        // Implementation would return current detection state
+        return false
 
         SecureLogger.log("ℹ️ Object detection model not available - text translation still works", level: .info)
 
@@ -97,7 +120,9 @@ class ObjectDetectionManager {
         // Perform all heavy processing on background queue
         processingQueue.async { [weak self] in
             guard let self = self else {
-                completion(nil)
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
                 return
             }
 
@@ -115,7 +140,9 @@ class ObjectDetectionManager {
                 #if DEBUG
                 SecureLogger.log("Using cached detection result", level: .info)
                 #endif
-                completion(cachedResult as String)
+                DispatchQueue.main.async {
+                    completion(cachedResult as String)
+                }
                 return
             }
 
@@ -123,12 +150,12 @@ class ObjectDetectionManager {
             guard let visionModel = self.visionModel else {
                 SecureLogger.logError("Object detection model not available")
                 DispatchQueue.main.async {
-                    ARErrorManager.shared.showError(
+                    errorManager.showError(
                         message: "Object detection model is not available. Please restart the app.",
                         retryAction: nil
                     )
+                    completion(nil)
                 }
-                completion(nil)
                 return
             }
 
@@ -169,14 +196,18 @@ class ObjectDetectionManager {
         
         // Skip processing for extremely small regions that would fail detection
         if cropRect.width < 10 || cropRect.height < 10 {
-            completion(nil)
+            DispatchQueue.main.async {
+                completion(nil)
+            }
             return
         }
         
         // Make sure we're not trying to crop outside the image bounds
         cropRect = ciImage.extent.intersection(cropRect)
         if cropRect.isEmpty {
-            completion(nil)
+            DispatchQueue.main.async {
+                completion(nil)
+            }
             return
         }
         
@@ -190,22 +221,29 @@ class ObjectDetectionManager {
         guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else {
             SecureLogger.logError("Failed to create CGImage from CIImage for object detection")
             DispatchQueue.main.async {
-                ARErrorManager.shared.showError(
+                errorManager.showError(
                     message: "Image processing failed. Please try again.",
                     retryAction: nil
                 )
+                completion(nil)
             }
-            completion(nil)
             return
         }
         
         // Set up the ML request to detect objects in the image
         let request = VNCoreMLRequest(model: visionModel) { [weak self] request, error in
-            guard let self = self else { return }
+            guard let self = self else { 
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
+                return 
+            }
             
             if let error = error {
                 SecureLogger.logError("Vision request failed", error: error)
-                completion(nil)
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
                 return
             }
             
@@ -215,7 +253,9 @@ class ObjectDetectionManager {
                   let best = results.first,
                   best.confidence > AppConstants.AR.confidenceThreshold else {
                 SecureLogger.log("No object detected with sufficient confidence", level: .info)
-                completion(nil)
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
                 return
             }
             
@@ -226,7 +266,9 @@ class ObjectDetectionManager {
             // Cache the detection result
             self.detectionResultCache.setObject(best.identifier as NSString, forKey: cacheKey)
             
-            completion(best.identifier)
+            DispatchQueue.main.async {
+                completion(best.identifier)
+            }
         }
         
         // Use center crop scaling to focus on the main object in the frame
@@ -239,12 +281,12 @@ class ObjectDetectionManager {
             } catch {
                 SecureLogger.logError("Vision request failed", error: error)
                 DispatchQueue.main.async {
-                    ARErrorManager.shared.showError(
+                    errorManager.showError(
                         message: "Vision processing failed. Please try again.",
                         retryAction: nil
                     )
+                    completion(nil)
                 }
-                completion(nil)
             }
         } // End of processingQueue.async
     }

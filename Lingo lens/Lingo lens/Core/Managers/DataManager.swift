@@ -8,15 +8,21 @@
 import Foundation
 import SwiftUI
 
-/// Singleton manager for handling user defaults data storage across the app
+/// Manager for handling user defaults data storage across the app
 /// Keeps track of user preferences, settings, and states that need to persist between app launches
-class DataManager {
+/// Now supports dependency injection instead of singleton pattern
+class DataManager: DataPersisting {
     
-    // Single shared instance for app-wide access
-    static let shared = DataManager()
+    // MARK: - Initialization
     
-    // Private init stops other parts of app from creating multiple instances
-    private init() {}
+    /// Initialize DataManager with optional custom UserDefaults (useful for testing)
+    /// - Parameter userDefaults: Custom UserDefaults instance, defaults to standard
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+    }
+    
+    // Private user defaults instance
+    private let userDefaults: UserDefaults
     
     // MARK: - Keys
     
@@ -44,26 +50,26 @@ class DataManager {
     func trackAppLaunch() {
         
         // Initialize user preference for settings bundle
-        UserDefaults.standard.register(defaults: [
+        userDefaults.register(defaults: [
             "developer_name": "Abhyas Mall"
         ])
         
         // Check if this is the first launch
-        let isFirstLaunch = UserDefaults.standard.object(forKey: Keys.isFirstLaunch) == nil
+        let isFirstLaunch = userDefaults.object(forKey: Keys.isFirstLaunch) == nil
         
         if isFirstLaunch {
             print("📱 First app launch detected")
             
             // This is the first launch ever
-            UserDefaults.standard.set(false, forKey: Keys.isFirstLaunch)
-            UserDefaults.standard.set(1, forKey: Keys.launchCount)
+            userDefaults.set(false, forKey: Keys.isFirstLaunch)
+            userDefaults.set(1, forKey: Keys.launchCount)
             
             // Set initial state for onboarding - false means onboarding hasn't been completed yet
-            UserDefaults.standard.set(false, forKey: Keys.didFinishOnBoarding)
+            userDefaults.set(false, forKey: Keys.didFinishOnBoarding)
             
             // Set initial state for showing instructions - false signifies that user has not yet
             // seen the instructions sheet
-            UserDefaults.standard.set(false, forKey: Keys.didDismissInstructions)
+            userDefaults.set(false, forKey: Keys.didDismissInstructions)
             
             // Save the initial launch date
             saveInitialLaunchDate()
@@ -74,8 +80,8 @@ class DataManager {
         } else {
             
             // Increment launch counter
-            let currentCount = UserDefaults.standard.integer(forKey: Keys.launchCount)
-            UserDefaults.standard.set(currentCount + 1, forKey: Keys.launchCount)
+            let currentCount = userDefaults.integer(forKey: Keys.launchCount)
+            userDefaults.set(currentCount + 1, forKey: Keys.launchCount)
             
             print("📱 App launch #\(currentCount + 1)")
         }
@@ -85,60 +91,60 @@ class DataManager {
     /// Called when the app is launched for the first time
     func saveInitialLaunchDate() {
         let currentDate = Date()
-        UserDefaults.standard.set(currentDate, forKey: Keys.initialLaunchDate)
+        userDefaults.set(currentDate, forKey: Keys.initialLaunchDate)
     }
 
     /// Retrieves the initial launch date from UserDefaults
     /// - Returns: Date when the app was first launched, or nil if not available
     func getInitialLaunchDate() -> Date? {
-        return UserDefaults.standard.object(forKey: Keys.initialLaunchDate) as? Date
+        return userDefaults.object(forKey: Keys.initialLaunchDate) as? Date
     }
     
     /// Checks if this is the first time the app has been launched
     /// - Returns: True if this is the first launch after installation
     func isFirstLaunch() -> Bool {
-        return UserDefaults.standard.integer(forKey: Keys.launchCount) <= 1
+        return userDefaults.integer(forKey: Keys.launchCount) <= 1
     }
 
     /// Gets the current launch count
     /// - Returns: Number of times the app has been launched
     func getLaunchCount() -> Int {
-        return UserDefaults.standard.integer(forKey: Keys.launchCount)
+        return userDefaults.integer(forKey: Keys.launchCount)
     }
 
     /// Marks onboarding as complete in UserDefaults
     /// Called when user completes the onboarding process
     func finishOnBoarding() {
-        UserDefaults.standard.set(true, forKey: Keys.didFinishOnBoarding)
+        userDefaults.set(true, forKey: Keys.didFinishOnBoarding)
     }
 
     /// Checks if user has completed the onboarding process
     /// Returns true if onboarding was completed, false if it still needs to be shown
     func didFinishOnBoarding() -> Bool {
-        return UserDefaults.standard.bool(forKey: Keys.didFinishOnBoarding)
+        return userDefaults.bool(forKey: Keys.didFinishOnBoarding)
     }
 
     /// Checks if the user has previously dismissed the instructions screen
     /// Returns true if instructions were dismissed, false if they should be shown
     func hasDismissedInstructions() -> Bool {
-        return UserDefaults.standard.bool(forKey: Keys.didDismissInstructions)
+        return userDefaults.bool(forKey: Keys.didDismissInstructions)
     }
 
     /// Marks instructions as dismissed in UserDefaults
     /// Called when user closes the instructions screen
     func dismissedInstructions() {
-        UserDefaults.standard.set(true, forKey: Keys.didDismissInstructions)
+        userDefaults.set(true, forKey: Keys.didDismissInstructions)
     }
     
     /// Checks if app should show rating prompt on 3rd launch
     func shouldShowRatingPrompt() -> Bool {
         // If user chose "Don't Ask Again", never show prompt
-        if UserDefaults.standard.bool(forKey: Keys.neverAskForRating) {
+        if userDefaults.bool(forKey: Keys.neverAskForRating) {
             return false
         }
 
         // If prompt has already been shown, don't show again
-        if UserDefaults.standard.bool(forKey: Keys.ratingPromptShown) {
+        if userDefaults.bool(forKey: Keys.ratingPromptShown) {
             return false
         }
 
@@ -148,12 +154,12 @@ class DataManager {
 
     /// Marks that rating prompt has been shown
     func markRatingPromptAsShown() {
-        UserDefaults.standard.set(true, forKey: Keys.ratingPromptShown)
+        userDefaults.set(true, forKey: Keys.ratingPromptShown)
     }
 
     /// Sets preference to never show rating prompt again
     func setNeverAskForRating() {
-        UserDefaults.standard.set(true, forKey: Keys.neverAskForRating)
+        userDefaults.set(true, forKey: Keys.neverAskForRating)
     }
     
     // MARK: - Language Settings
@@ -161,13 +167,13 @@ class DataManager {
     /// Saves the user's selected translation language code
     /// Called when user changes their target language
     func saveSelectedLanguageCode(_ code: String) {
-        UserDefaults.standard.set(code, forKey: Keys.selectedLanguageCode)
+        userDefaults.set(code, forKey: Keys.selectedLanguageCode)
     }
 
     /// Gets the user's previously selected language code
     /// Returns nil if no language has been selected before
     func getSelectedLanguageCode() -> String? {
-        return UserDefaults.standard.string(forKey: Keys.selectedLanguageCode)
+        return userDefaults.string(forKey: Keys.selectedLanguageCode)
     }
     
     // MARK: - Appearance Settings
@@ -175,13 +181,13 @@ class DataManager {
     /// Saves the user's chosen app theme (light/dark/system)
     /// Raw integer value from AppearanceManager.ColorSchemeOption
     func saveColorSchemeOption(_ option: Int) {
-        UserDefaults.standard.set(option, forKey: Keys.colorSchemeOption)
+        userDefaults.set(option, forKey: Keys.colorSchemeOption)
     }
 
     /// Gets the user's app theme preference
     /// Returns the raw int value that maps to AppearanceManager.ColorSchemeOption
     func getColorSchemeOption() -> Int {
-        return UserDefaults.standard.integer(forKey: Keys.colorSchemeOption)
+        return userDefaults.integer(forKey: Keys.colorSchemeOption)
     }
     
     // MARK: - UI Preferences
@@ -189,25 +195,25 @@ class DataManager {
     /// Saves whether to show the label removal warning
     /// Used to remember "don't show again" preference for alerts
     func saveNeverShowLabelRemovalWarning(_ value: Bool) {
-        UserDefaults.standard.set(value, forKey: Keys.neverShowLabelRemovalWarning)
+        userDefaults.set(value, forKey: Keys.neverShowLabelRemovalWarning)
     }
 
     /// Checks if we should hide the label removal warning
     /// Returns true if user selected "don't show again"
     func getNeverShowLabelRemovalWarning() -> Bool {
-        return UserDefaults.standard.bool(forKey: Keys.neverShowLabelRemovalWarning)
+        return userDefaults.bool(forKey: Keys.neverShowLabelRemovalWarning)
     }
 
     /// Saves the user's preferred annotation size
     /// Scale factor where 1.0 is default size
     func saveAnnotationScale(_ scale: CGFloat) {
-        UserDefaults.standard.set(Float(scale), forKey: Keys.annotationScale)
+        userDefaults.set(Float(scale), forKey: Keys.annotationScale)
     }
 
     /// Gets the saved annotation scale factor
     /// Returns 1.0 (default size) if nothing saved previously
     func getAnnotationScale() -> CGFloat {
-        let scale = UserDefaults.standard.float(forKey: Keys.annotationScale)
+        let scale = userDefaults.float(forKey: Keys.annotationScale)
         return scale > 0 ? CGFloat(scale) : 1.0
     }
 }

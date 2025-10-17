@@ -14,6 +14,9 @@ struct InstructionsView: View {
     // Environment variable to dismiss this sheet when needed
     @Environment(\.dismiss) private var dismiss
     
+    // Data persistence for tracking instruction state
+    @EnvironmentObject var dataPersistence: DataPersisting
+    
     // To present the rating alert after the InstructionsView is dismissed
     @Binding var ratingAlert: Bool
     
@@ -112,11 +115,11 @@ struct InstructionsView: View {
         // the user has dismissed so we do not present instructions
         // unless user presses the info i button on the toolbar
         .onDisappear {
-            if !DataManager.shared.hasDismissedInstructions() {
-                DataManager.shared.dismissedInstructions()
+            if !dataPersistence.hasDismissedInstructions() {
+                dataPersistence.dismissedInstructions()
                 
                 // Updating rating alert's value
-                ratingAlert = DataManager.shared.shouldShowRatingPrompt()
+                ratingAlert = dataPersistence.shouldShowRatingPrompt()
             }
         }
     }

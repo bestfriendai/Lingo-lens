@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 /// Dependency Injection Container for managing app dependencies
 /// Provides centralized dependency management and enables testing with mock implementations
@@ -19,42 +20,75 @@ final class DIContainer: ObservableObject {
 
     // MARK: - Core Dependencies
 
-    private(set) lazy var speechManager: SpeechManaging = SpeechManager.shared
-    private(set) lazy var dataPersistence: DataPersisting = DataManager.shared
-    private(set) lazy var translationService: TranslationService = TranslationService()
-    private(set) lazy var appearanceManager: AppearanceManager = AppearanceManager()
-    private(set) lazy var persistenceController: PersistenceController = PersistenceController.shared
+    private(set) var speechManager: SpeechManaging
+    private(set) var dataPersistence: DataPersisting
+    private(set) var translationService: TranslationServicing
+    private(set) var appearanceManager: AppearanceManaging
+    private(set) var persistenceController: PersistenceController
 
     // AR-specific dependencies
-    private(set) lazy var objectDetectionManager: ObjectDetectionManager = ObjectDetectionManager()
+    private(set) var objectDetectionManager: ObjectDetecting
+    private(set) var speechRecognitionManager: SpeechRecognizing
 
     // Error managers
-    private(set) lazy var coreDataErrorManager: CoreDataErrorManager = CoreDataErrorManager.shared
-    private(set) lazy var arErrorManager: ARErrorManager = ARErrorManager.shared
-    private(set) lazy var speechErrorManager: SpeechErrorManager = SpeechErrorManager.shared
+    private(set) var coreDataErrorManager: ErrorManaging
+    private(set) var arErrorManager: ErrorManaging
+    private(set) var speechErrorManager: ErrorManaging
 
     // MARK: - Initialization
 
-    private init() {}
+    private init() {
+        // Create instances instead of using singletons
+        self.dataPersistence = DataManager()
+        self.translationService = TranslationService()
+        self.appearanceManager = AppearanceManager(dataPersistence: dataPersistence)
+        self.persistenceController = PersistenceController()
+        self.coreDataErrorManager = CoreDataErrorManager()
+        self.arErrorManager = ARErrorManager()
+        self.speechErrorManager = SpeechErrorManager()
+        self.speechManager = SpeechManager(errorManager: speechErrorManager)
+        self.objectDetectionManager = ObjectDetectionManager(errorManager: arErrorManager)
+        self.speechRecognitionManager = SpeechRecognitionManager()
+    }
 
     // MARK: - Factory Methods
 
     /// Creates a new ChatTranslatorViewModel with injected dependencies
     @MainActor
     func makeChatTranslatorViewModel() -> ChatTranslatorViewModel {
-        return ChatTranslatorViewModel(translationService: translationService)
+        return ChatTranslatorViewModel(
+            translationService: translationService,
+            speechManager: speechManager,
+            speechRecognitionManager: speechRecognitionManager
+        )
     }
 
     /// Creates a new ARViewModel with injected dependencies
     @MainActor
     func makeARViewModel() -> ARViewModel {
-        return ARViewModel()
+        return ARViewModel(
+            dataPersistence: dataPersistence,
+            translationService: translationService
+        )
     }
 
     /// Creates a new ARCoordinator with injected dependencies
     @MainActor
     func makeARCoordinator(arViewModel: ARViewModel) -> ARCoordinator {
-        return ARCoordinator(arViewModel: arViewModel, objectDetectionManager: objectDetectionManager)
+        return ARCoordinator(
+            arViewModel: arViewModel, 
+            objectDetectionManager: objectDetectionManager,
+            errorManager: arErrorManager
+        )
+    }
+    
+    /// Creates a new SettingsViewModel with injected dependencies
+    @MainActor
+    func makeSettingsViewModel() -> SettingsViewModel {
+        return SettingsViewModel(
+            dataPersistence: dataPersistence,
+            appearanceManager: appearanceManager
+        )
     }
 
     // MARK: - Test Support
@@ -86,11 +120,15 @@ final class DIContainer: ObservableObject {
     /// Resets all dependencies to their default implementations
     /// Useful for cleaning up after tests
     func reset() {
-        speechManager = SpeechManager.shared
-        dataPersistence = DataManager.shared
-        translationService = TranslationService()
-        appearanceManager = AppearanceManager()
-        persistenceController = PersistenceController.shared
-        objectDetectionManager = ObjectDetectionManager()
+        self.dataPersistence = DataManager()
+        self.translationService = TranslationService()
+        self.appearanceManager = AppearanceManager(dataPersistence: dataPersistence)
+        self.persistenceController = PersistenceController()
+        self.coreDataErrorManager = CoreDataErrorManager()
+        self.arErrorManager = ARErrorManager()
+        self.speechErrorManager = SpeechErrorManager()
+        self.speechManager = SpeechManager(errorManager: speechErrorManager)
+        self.objectDetectionManager = ObjectDetectionManager(errorManager: arErrorManager)
+        self.speechRecognitionManager = SpeechRecognitionManager()
     }
 }

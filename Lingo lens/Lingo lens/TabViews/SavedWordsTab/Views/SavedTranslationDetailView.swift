@@ -21,8 +21,8 @@ struct SavedTranslationDetailView: View {
     // For dismissing this view when user is done or after deleting
     @Environment(\.dismiss) private var dismiss
     
-    // Shared speech manager to handle pronunciation
-    @ObservedObject private var speechManager = SpeechManager.shared
+    // Speech manager to handle pronunciation
+    @EnvironmentObject var speechManager: SpeechManaging
     
     // MARK: - State Properties
     
@@ -205,7 +205,7 @@ struct SavedTranslationDetailView: View {
         
         // Stop any ongoing speech when view disappears
         .onDisappear {
-            SpeechManager.shared.stopSpeaking()
+            speechManager.stopSpeaking()
         }
     }
     
@@ -213,7 +213,7 @@ struct SavedTranslationDetailView: View {
     /// Uses the target language's voice settings
     private func speakTranslation() {
         SecureLogger.log("Speak translation button pressed", level: .info)
-        SpeechManager.shared.speak(
+        speechManager.speak(
             text: translation.translatedText ?? "",
             languageCode: translation.languageCode ?? "en-US"
         )

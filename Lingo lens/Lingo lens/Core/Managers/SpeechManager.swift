@@ -9,14 +9,24 @@ import AVFoundation
 import SwiftUI
 import Combine
 
-/// Singleton manager for handling all speech synthesis throughout the app
+/// Manager for handling all speech synthesis throughout the app
 /// Prevents lag by maintaining a single instance of AVSpeechSynthesizer
 /// @MainActor ensures all UI updates happen on the main thread (Swift 6 concurrency)
 @MainActor
 class SpeechManager: NSObject, ObservableObject, SpeechManaging {
     
-    // Shared instance for whole app to use
-    static let shared = SpeechManager()
+    // MARK: - Initialization
+    
+    /// Initialize SpeechManager with optional custom dependencies
+    /// - Parameters:
+    ///   - speechSynthesizer: Custom AVSpeechSynthesizer instance, defaults to new instance
+    ///   - errorManager: Error manager for handling speech errors
+    init(speechSynthesizer: AVSpeechSynthesizer = AVSpeechSynthesizer(), errorManager: ErrorManaging? = nil) {
+        self.speechSynthesizer = speechSynthesizer
+        self.errorManager = errorManager
+        super.init()
+        self.speechSynthesizer.delegate = self
+    }
     
     // MARK: - Published Properties
 
@@ -39,16 +49,13 @@ class SpeechManager: NSObject, ObservableObject, SpeechManaging {
     // MARK: - Private Properties
 
     // The actual speech engine from Apple's framework
-    private let speechSynthesizer = AVSpeechSynthesizer()
+    private let speechSynthesizer: AVSpeechSynthesizer
+    
+    // Error manager for handling speech errors
+    private let errorManager: ErrorManaging?
     
     // Tracks if audio session is ready for playback
     private var isAudioSessionPrepared = false
-    
-    // Setup the speech delegate when created
-    private override init() {
-        super.init()
-        speechSynthesizer.delegate = self
-    }
     
     // MARK: - Audio Session Management
 
@@ -107,7 +114,7 @@ class SpeechManager: NSObject, ObservableObject, SpeechManaging {
                 utterance.voice = fallbackVoice
             } else {
                 isLoading = false
-                SpeechErrorManager.shared.showError(
+                errorManager?.showError(
                     message: "Unable to play audio: No voices available",
                     retryAction: nil
                 )

@@ -20,8 +20,14 @@ struct ARTranslationView: View {
     // Main view model that handles AR state and logic
     @ObservedObject var arViewModel: ARViewModel
     
+    // Speech manager for pronunciation features
+    @EnvironmentObject var speechManager: SpeechManaging
+    
+    // DI Container for creating ViewModels
+    @EnvironmentObject var diContainer: DIContainer
+    
     // View model for expanding/collapsing settings panel
-    @StateObject private var settingsViewModel = SettingsViewModel()
+    @State private var settingsViewModel: SettingsViewModel?
     
     // Manages camera permission requests and state
     @StateObject private var cameraPermissionManager = CameraPermissionManager()
@@ -151,15 +157,20 @@ struct ARTranslationView: View {
         }
     
         .onAppear {
+            // Initialize settingsViewModel if needed
+            if settingsViewModel == nil {
+                settingsViewModel = diContainer.makeSettingsViewModel()
+            }
+            
             isViewActive = true
 
             // Load preferences only once
             if !hasLoadedPreferences {
-                neverShowAlertAboutReset = DataManager.shared.getNeverShowLabelRemovalWarning()
-                if !DataManager.shared.hasDismissedInstructions() {
+                neverShowAlertAboutReset = diContainer.dataPersistence.getNeverShowLabelRemovalWarning()
+                if !diContainer.dataPersistence.hasDismissedInstructions() {
                     showRatingAlert = false
                 } else {
-                    showRatingAlert = DataManager.shared.shouldShowRatingPrompt()
+                    showRatingAlert = diContainer.dataPersistence.shouldShowRatingPrompt()
                 }
                 hasLoadedPreferences = true
             }
@@ -374,7 +385,7 @@ struct ARTranslationView: View {
             }
             
             // Settings panel (slides up from bottom)
-            if settingsViewModel.isExpanded {
+            if settingsViewModel?.isExpanded == true {
                 SettingsPanel(
                     arViewModel: arViewModel,
                     settingsViewModel: settingsViewModel
@@ -384,7 +395,7 @@ struct ARTranslationView: View {
         
         .onAppear {
             withAnimation {
-                if !DataManager.shared.hasDismissedInstructions() {
+                if !diContainer.dataPersistence.hasDismissedInstructions() {
                     showInstructions = true
                 }
             }
@@ -393,6 +404,7 @@ struct ARTranslationView: View {
         // Instructions sheet
         .sheet(isPresented: $showInstructions) {
             InstructionsView(ratingAlert: $showRatingAlert)
+                .environmentObject(diContainer.dataPersistence)
         }
         
         // Alert for rating the app
@@ -401,7 +413,7 @@ struct ARTranslationView: View {
             // Rate now button - takes user to App Store
             Button("Rate Now") {
                 
-                DataManager.shared.markRatingPromptAsShown()
+                diContainer.dataPersistence.markRatingPromptAsShown()
                 
                 // Open App Store - replace with your app ID
                 if let url = URL(string: "https://apps.apple.com/") {
@@ -411,13 +423,13 @@ struct ARTranslationView: View {
             
             // Later button - just dismisses for now
             Button("Later") {
-                DataManager.shared.markRatingPromptAsShown()
+                diContainer.dataPersistence.markRatingPromptAsShown()
             }
             
             // Don't ask again button
             Button("Don't Ask Again", role: .cancel) {
-                DataManager.shared.setNeverAskForRating()
-                DataManager.shared.markRatingPromptAsShown()
+                diContainer.dataPersistence.setNeverAskForRating()
+                diContainer.dataPersistence.markRatingPromptAsShown()
             }
         } message: {
             Text("If you enjoy using our app, would you mind taking a moment to rate it? It won't take more than a minute. Thanks for your support!")
@@ -427,7 +439,7 @@ struct ARTranslationView: View {
         .alert("Label Removal Warning", isPresented: $showAlertAboutReset) {
             Button("Ok") {}
             Button("Don't Warn Again", role: .cancel) {
-                DataManager.shared.saveNeverShowLabelRemovalWarning(true)
+                diContainer.dataPersistence.saveNeverShowLabelRemovalWarning(true)
                 neverShowAlertAboutReset = true
             }
         } message: {
@@ -605,24 +617,24 @@ struct ARTranslationView: View {
                             .font(.system(size: overlay.fontSize, weight: .semibold, design: .rounded))
                             .foregroundColor(.black)
                             .lineLimit(2)
-                            .minimumScaleFactor(0.7)
+                            .minimumScaleFactor(0.8)  // Less aggressive scaling
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .frame(width: max(overlay.originalSize.width, 40), 
-                                   height: max(overlay.originalSize.height, 20))
+                            .padding(.horizontal, 4)   // Reduced padding
+                            .padding(.vertical, 2)     // Reduced padding
+                            .frame(width: overlay.originalSize.width, 
+                                   height: overlay.originalSize.height)
                             .background(
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(Color.white.opacity(0.97))
-                                    .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.white.opacity(0.95))
+                                    .shadow(color: Color.black.opacity(0.12), radius: 1.5, x: 0, y: 0.5)
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 3)
-                                            .stroke(Color.black.opacity(0.08), lineWidth: 0.5)
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .stroke(Color.black.opacity(0.06), lineWidth: 0.3)
                                     )
                             )
                             .position(overlay.screenPosition)
                             .transition(.opacity)
-                            .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: overlay.screenPosition)
+                            .animation(.interpolatingSpring(stiffness: 400, damping: 25), value: overlay.screenPosition)
                             .id(overlay.id)
                     }
                 }
@@ -633,92 +645,70 @@ struct ARTranslationView: View {
     }
 
     /// Converts Vision framework normalized coordinates to screen coordinates
-    /// Accounts for ARSCNView's camera feed scaling and orientation
+    /// Uses consistent coordinate system with calculateOverlaySize for proper sizing
     private func convertVisionToScreen(boundingBox: CGRect, sceneView: ARSCNView) -> CGPoint {
         let screenWidth = sceneView.bounds.width
         let screenHeight = sceneView.bounds.height
 
-        let orientation: UIInterfaceOrientation = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?
-            .interfaceOrientation ?? .portrait
-
-        let isLandscape = orientation == .landscapeLeft || orientation == .landscapeRight
-        let isPortraitUpsideDown = orientation == .portraitUpsideDown
-
-        if isLandscape {
-            if orientation == .landscapeRight {
-                let screenX = boundingBox.midY * screenWidth
-                let screenY = (1.0 - boundingBox.midX) * screenHeight
-                return CGPoint(x: screenX, y: screenY)
-            } else {
-                let screenX = (1.0 - boundingBox.midY) * screenWidth
-                let screenY = boundingBox.midX * screenHeight
-                return CGPoint(x: screenX, y: screenY)
-            }
-        } else {
-            if isPortraitUpsideDown {
-                let screenX = (1.0 - boundingBox.midX) * screenWidth
-                let screenY = boundingBox.midY * screenHeight
-                return CGPoint(x: screenX, y: screenY)
-            } else {
-                let screenX = boundingBox.midX * screenWidth
-                let screenY = (1.0 - boundingBox.midY) * screenHeight
-                return CGPoint(x: screenX, y: screenY)
-            }
-        }
+        // Vision framework coordinates are normalized (0-1) with origin at top-left
+        // Direct mapping to screen coordinates for consistency with size calculations
+        let screenX = boundingBox.midX * screenWidth
+        let screenY = boundingBox.midY * screenHeight
+        
+        return CGPoint(x: screenX, y: screenY)
     }
 
     /// Calculates overlay size from Vision bounding box to match original text size
-    /// This ensures translated text appears at the same size as the original detected text
+    /// Uses direct coordinate mapping for consistent sizing with position calculation
     private func calculateOverlaySize(boundingBox: CGRect, sceneView: ARSCNView) -> CGSize {
         let screenWidth = sceneView.bounds.width
         let screenHeight = sceneView.bounds.height
 
-        let orientation: UIInterfaceOrientation = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first?
-            .interfaceOrientation ?? .portrait
+        // Vision framework boundingBox is normalized (0-1) with origin at top-left
+        // Direct conversion to screen coordinates for accurate text size matching
+        let rawWidth = boundingBox.width * screenWidth
+        let rawHeight = boundingBox.height * screenHeight
 
-        let isLandscape = orientation == .landscapeLeft || orientation == .landscapeRight
+        // Apply minimal padding to ensure text fits comfortably
+        // This preserves the original text proportions while adding slight breathing room
+        let paddingFactor: CGFloat = 1.03
+        let adjustedWidth = rawWidth * paddingFactor
+        let adjustedHeight = rawHeight * paddingFactor
 
-        let rawWidth: CGFloat
-        let rawHeight: CGFloat
+        // Set absolute minimum sizes to prevent invisible overlays
+        // But allow small text to remain proportionally small
+        let minWidth: CGFloat = 20
+        let minHeight: CGFloat = 12
+        let maxWidth = screenWidth * 0.95
+        let maxHeight = screenHeight * 0.25
 
-        if isLandscape {
-            rawWidth = boundingBox.height * screenWidth
-            rawHeight = boundingBox.width * screenHeight
-        } else {
-            rawWidth = boundingBox.width * screenWidth
-            rawHeight = boundingBox.height * screenHeight
-        }
-
-        let minWidth: CGFloat = 40
-        let minHeight: CGFloat = 20
-        let maxWidth = screenWidth * 0.8
-        let maxHeight = screenHeight * 0.15
-
-        let finalWidth = max(minWidth, min(rawWidth * 1.1, maxWidth))
-        let finalHeight = max(minHeight, min(rawHeight * 1.15, maxHeight))
+        // Use the actual calculated dimensions with minimal constraints
+        let finalWidth = max(minWidth, min(adjustedWidth, maxWidth))
+        let finalHeight = max(minHeight, min(adjustedHeight, maxHeight))
 
         return CGSize(width: finalWidth, height: finalHeight)
     }
 
-    /// Calculates font size to match the original text height
-    /// Uses the original text height to determine appropriate font size for translated text
+    /// Calculates font size to match the original text height precisely
+    /// Uses the actual text height from Vision framework to determine appropriate font size
     private func calculateFontSize(for originalHeight: CGFloat, text: String) -> CGFloat {
-        let baseFontSize = originalHeight * 0.65
+        // Calculate font size based on the actual height of the detected text
+        // This ensures overlays match the original text dimensions exactly
+        let baseFontSize = originalHeight * 0.75  // Slightly higher ratio for better readability
         
+        // Set reasonable bounds but allow the actual text size to dominate
         let screenHeight = UIScreen.main.bounds.height
-        let minFontSize: CGFloat = screenHeight > 700 ? 12 : 10
-        let maxFontSize: CGFloat = screenHeight > 800 ? 48 : 38
+        let minFontSize: CGFloat = 8   // Allow very small fonts for small text
+        let maxFontSize: CGFloat = 60  // Allow larger fonts for big text
         
         var fontSize = max(minFontSize, min(baseFontSize, maxFontSize))
         
-        if text.count > 15 {
-            fontSize *= 0.9
-        } else if text.count > 25 {
-            fontSize *= 0.8
+        // Apply minimal text length adjustments - don't override the size matching
+        let wordCount = text.components(separatedBy: .whitespaces).filter { !$0.isEmpty }.count
+        if wordCount > 5 {
+            fontSize *= 0.85  // Slight reduction for very long phrases
+        } else if wordCount > 3 {
+            fontSize *= 0.92  // Minimal reduction for medium phrases
         }
         
         return fontSize

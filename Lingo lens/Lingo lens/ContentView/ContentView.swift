@@ -15,8 +15,11 @@ struct ContentView: View {
     // Provides translation features throughout the app
     @EnvironmentObject var translationService: TranslationService
     
+    // DI Container for creating ViewModels
+    @EnvironmentObject var diContainer: DIContainer
+    
     // Manages AR camera session and translation-related state
-    @StateObject private var arViewModel = ARViewModel()
+    @State private var arViewModel: ARViewModel?
 
     // Controls alert when no languages are available for translation
     @State private var showNoLanguagesAlert = false
@@ -32,17 +35,30 @@ struct ContentView: View {
     // Currently selected tab in the UI
     @State private var selectedTab: Tab = .arTranslationView
 
+    // MARK: - Initialization
+    
+    init() {
+        // We'll initialize arViewModel in onAppear since we need access to diContainer
+    }
+
     // MARK: - View Body
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ARTranslationView(arViewModel: arViewModel)
+            if let arViewModel = arViewModel {
+                ARTranslationView(arViewModel: arViewModel)
                 .tabItem {
                     Label("Translate", systemImage: "camera.viewfinder")
                 }
                 .tag(Tab.arTranslationView)
+                .environmentObject(diContainer.speechManager)
+            } else {
+                // Loading view while ARViewModel initializes
+                ProgressView("Loading...")
+                    .tag(Tab.arTranslationView)
+            }
 
-            ChatTranslatorView(translationService: translationService)
+            ChatTranslatorView(translationService: translationService, diContainer: diContainer)
                 .tabItem {
                     Label("Chat", systemImage: "bubble.left.and.bubble.right")
                 }
@@ -53,6 +69,7 @@ struct ContentView: View {
                     Label("Saved Words", systemImage: "bookmark.fill")
                 }
                 .tag(Tab.savedWordsView)
+                .environmentObject(diContainer.speechManager)
 
             SettingsTabView(arViewModel: arViewModel)
                 .tabItem {
@@ -81,31 +98,47 @@ struct ContentView: View {
         .onChange(of: selectedTab) { oldValue, newValue in
             // Pause AR session when leaving AR tab for instant Chat performance
             if oldValue == .arTranslationView && newValue != .arTranslationView {
-                arViewModel.pauseARSession()
+                arViewModel?.pauseARSession()
             }
 
             // Resume AR session when returning to AR tab
             if newValue == .arTranslationView && oldValue != .arTranslationView {
-                arViewModel.resumeARSession()
+                arViewModel?.resumeARSession()
             }
 
             // Audio session management
             if newValue == .arTranslationView || newValue == .savedWordsView || newValue == .chatTranslatorView {
                 Task {
-                    SpeechManager.shared.prepareAudioSession()
+                    diContainer.speechManager.prepareAudioSession()
                 }
             } else if newValue == .settingsView {
-                SpeechManager.shared.deactivateAudioSession()
+                diContainer.speechManager.deactivateAudioSession()
             }
         }
 
         .onAppear {
+            // Initialize ARViewModel with dependencies
+            if arViewModel == nil {
+                arViewModel = diContainer.makeARViewModel()
+            }
+            
+            // Track app launch and check onboarding status
+            if !Lingo_lensApp.didInitOnce {
+                diContainer.dataPersistence.trackAppLaunch()
+            }
+            
+            // Check if onboarding should be shown
+            if !diContainer.dataPersistence.didFinishOnBoarding() {
+                // This will be handled by the app's showOnboarding state
+                return
+            }
+            
             // Trigger lazy language loading
             translationService.loadLanguagesIfNeeded()
 
             if selectedTab == .arTranslationView || selectedTab == .savedWordsView || selectedTab == .chatTranslatorView {
                 Task {
-                    SpeechManager.shared.prepareAudioSession()
+                    diContainer.speechManager.prepareAudioSession()
                 }
             }
         }
@@ -116,7 +149,7 @@ struct ContentView: View {
             // Prepare audio session if we're on a tab that needs it
             if selectedTab == .arTranslationView || selectedTab == .savedWordsView || selectedTab == .chatTranslatorView {
                 Task {
-                    SpeechManager.shared.prepareAudioSession()
+                    diContainer.speechManager.prepareAudioSession()
                 }
             }
         }

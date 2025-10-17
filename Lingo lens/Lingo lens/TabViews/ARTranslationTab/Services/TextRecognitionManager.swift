@@ -50,7 +50,9 @@ class TextRecognitionManager {
         // Perform all heavy processing on background queue
         processingQueue.async { [weak self] in
             guard let self = self else {
-                completion([])
+                DispatchQueue.main.async {
+                    completion([])
+                }
                 return
             }
 
@@ -65,7 +67,9 @@ class TextRecognitionManager {
             // Convert CIImage to CGImage for Vision framework
             guard let cgImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent) else {
                 SecureLogger.logError("Failed to create CGImage from CIImage for text recognition")
-                completion([])
+                DispatchQueue.main.async {
+                    completion([])
+                }
                 return
             }
 
@@ -73,13 +77,17 @@ class TextRecognitionManager {
             let request = VNRecognizeTextRequest { request, error in
                 if let error = error {
                     SecureLogger.logError("Text recognition request failed", error: error)
-                    completion([])
+                    DispatchQueue.main.async {
+                        completion([])
+                    }
                     return
                 }
 
                 // Process recognized text observations
                 guard let observations = request.results as? [VNRecognizedTextObservation] else {
-                    completion([])
+                    DispatchQueue.main.async {
+                        completion([])
+                    }
                     return
                 }
 
@@ -126,7 +134,9 @@ class TextRecognitionManager {
                 SecureLogger.log("Text recognition found \(detectedWords.count) phrases in full frame", level: .info)
                 #endif
 
-                completion(detectedWords)
+                DispatchQueue.main.async {
+                    completion(detectedWords)
+                }
             }
 
             // Google Translate mode: Optimize for SPEED while maintaining accuracy
@@ -150,7 +160,9 @@ class TextRecognitionManager {
                 try handler.perform([request])
             } catch {
                 SecureLogger.logError("Vision text recognition failed", error: error)
-                completion([])
+                DispatchQueue.main.async {
+                    completion([])
+                }
             }
         }
     }
@@ -169,7 +181,9 @@ class TextRecognitionManager {
         // Perform all heavy processing on background queue
         processingQueue.async { [weak self] in
             guard let self = self else {
-                completion([])
+                DispatchQueue.main.async {
+                    completion([])
+                }
                 return
             }
 
@@ -180,7 +194,9 @@ class TextRecognitionManager {
             // Convert CIImage to CGImage for Vision framework
             guard let cgImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent) else {
                 SecureLogger.logError("Failed to create CGImage from CIImage for text recognition")
-                completion([])
+                DispatchQueue.main.async {
+                    completion([])
+                }
                 return
             }
 
@@ -188,13 +204,17 @@ class TextRecognitionManager {
             let request = VNRecognizeTextRequest { request, error in
                 if let error = error {
                     SecureLogger.logError("Text recognition request failed", error: error)
-                    completion([])
+                    DispatchQueue.main.async {
+                        completion([])
+                    }
                     return
                 }
 
                 // Process recognized text observations
                 guard let observations = request.results as? [VNRecognizedTextObservation] else {
-                    completion([])
+                    DispatchQueue.main.async {
+                        completion([])
+                    }
                     return
                 }
 
@@ -229,7 +249,9 @@ class TextRecognitionManager {
                     }
                 }
 
-                completion(detectedWords)
+                DispatchQueue.main.async {
+                    completion(detectedWords)
+                }
             }
 
             // Configure recognition settings for better accuracy in ROI
@@ -245,7 +267,9 @@ class TextRecognitionManager {
                 try handler.perform([request])
             } catch {
                 SecureLogger.logError("Vision text recognition failed", error: error)
-                completion([])
+                DispatchQueue.main.async {
+                    completion([])
+                }
             }
         }
     }

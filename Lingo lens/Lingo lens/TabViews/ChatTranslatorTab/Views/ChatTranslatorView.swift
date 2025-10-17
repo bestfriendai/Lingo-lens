@@ -12,15 +12,15 @@ import Translation
 struct ChatTranslatorView: View {
 
     @StateObject private var viewModel: ChatTranslatorViewModel
-    @ObservedObject private var speechRecognitionManager = SpeechRecognitionManager.shared
     @EnvironmentObject var translationService: TranslationService
+    @EnvironmentObject var diContainer: DIContainer
 
     @State private var showLanguageSelectionSheet = false
     @State private var isSelectingSourceLanguage = true
     @State private var scrollToBottom = false
 
-    init(translationService: TranslationService) {
-        _viewModel = StateObject(wrappedValue: ChatTranslatorViewModel(translationService: translationService))
+    init(translationService: TranslationService, diContainer: DIContainer) {
+        _viewModel = StateObject(wrappedValue: diContainer.makeChatTranslatorViewModel())
     }
 
     var body: some View {
@@ -144,7 +144,7 @@ struct ChatTranslatorView: View {
             // Note: Keep isSessionReady and translationConfiguration for faster return
         }
     }
-
+    
     // MARK: - Language Bar
 
     private var languageBar: some View {
@@ -465,7 +465,9 @@ struct FeatureTip: View {
         AvailableLanguage(locale: Locale.Language(languageCode: "de", region: "DE"))
     ]
 
-    return ChatTranslatorView(translationService: translationService)
+    let diContainer = DIContainer()
+    return ChatTranslatorView(translationService: translationService, diContainer: diContainer)
         .environmentObject(translationService)
-        .environmentObject(AppearanceManager())
+        .environmentObject(diContainer)
+        .environmentObject(diContainer.appearanceManager)
 }

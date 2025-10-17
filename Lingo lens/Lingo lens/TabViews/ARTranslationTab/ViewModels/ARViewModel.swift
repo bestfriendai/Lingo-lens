@@ -115,20 +115,24 @@ class ARViewModel: ObservableObject {
     // Persists to UserDefaults when changed
     @Published var selectedLanguage: AvailableLanguage {
         didSet {
-            DataManager.shared.saveSelectedLanguageCode(selectedLanguage.shortName())
+            dataPersistence.saveSelectedLanguageCode(selectedLanguage.shortName())
         }
     }
     
     // Scale factor for annotation size
     // Persists to UserDefaults when changed
-    @Published var annotationScale: CGFloat = DataManager.shared.getAnnotationScale() {
+    @Published var annotationScale: CGFloat {
         didSet {
-            DataManager.shared.saveAnnotationScale(annotationScale)
+            dataPersistence.saveAnnotationScale(annotationScale)
             updateAllAnnotationScales()
         }
     }
 
     // MARK: - Properties
+    
+    // Dependencies
+    private let dataPersistence: DataPersisting
+    private let translationService: TranslationServicing
     
     // Reference to AR scene view (set by ARViewContainer)
     weak var sceneView: ARSCNView?
@@ -145,8 +149,22 @@ class ARViewModel: ObservableObject {
     // MARK: - Initialization
     
     // Default to Spanish as initial language
-    init() {
-        self.selectedLanguage = AvailableLanguage(locale: Locale.Language(languageCode: "es", region: "ES"))
+    init(dataPersistence: DataPersisting, translationService: TranslationServicing) {
+        self.dataPersistence = dataPersistence
+        self.translationService = translationService
+        
+        // Initialize with default values
+        let initialScale = dataPersistence.getAnnotationScale()
+        let initialLanguage = AvailableLanguage(locale: Locale.Language(languageCode: "es", region: "ES"))
+        
+        self.selectedLanguage = initialLanguage
+        self.annotationScale = initialScale
+        
+        // Try to load saved language
+        if let savedLanguageCode = dataPersistence.getSelectedLanguageCode(),
+           let savedLanguage = translationService.availableLanguages.first(where: { $0.shortName() == savedLanguageCode }) {
+            self.selectedLanguage = savedLanguage
+        }
     }
     
     // MARK: - Class Methods
@@ -154,7 +172,7 @@ class ARViewModel: ObservableObject {
     /// Loads the previously selected language from UserDefaults
     /// Called when app starts or when available languages change
     func updateSelectedLanguageFromUserDefaults(availableLanguages: [AvailableLanguage]) {
-        let savedLanguageCode = DataManager.shared.getSelectedLanguageCode()
+        let savedLanguageCode = dataPersistence.getSelectedLanguageCode()
     
         if let savedCode = savedLanguageCode,
            let savedLanguage = availableLanguages.first(where: { $0.shortName() == savedCode }) {
@@ -165,7 +183,7 @@ class ARViewModel: ObservableObject {
             
             // Default to first available language if saved one isn't available
             self.selectedLanguage = availableLanguages.first!
-            DataManager.shared.saveSelectedLanguageCode(selectedLanguage.shortName())
+            dataPersistence.saveSelectedLanguageCode(selectedLanguage.shortName())
         }
     }
 
@@ -196,7 +214,8 @@ class ARViewModel: ObservableObject {
         isDeletingAnnotation = true
         
         // Small delay to show deletion is happening
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             guard let self = self else { return }
             
             // Get the annotation and remove from scene
@@ -266,7 +285,8 @@ class ARViewModel: ObservableObject {
         }
 
         // Small delay before restarting for better stability (non-blocking)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
             guard let self = self else { return }
             guard let sceneView = self.sceneView else { return }
 
@@ -331,51 +351,50 @@ class ARViewModel: ObservableObject {
         if let query = sceneView.raycastQuery(from: roiCenter, allowing: .estimatedPlane, alignment: .any) {
             let results = sceneView.session.raycast(query)
             if let result = results.first {
-                DispatchQueue.main.async {
-                    
-                    // Double-check object name is still valid
-                    guard !self.detectedObjectName.isEmpty else {
-                        self.isAddingAnnotation = false
-                        return
-                    }
-                    
-                    // Create annotation and add to scene
-                    let annotationNode = self.createCapsuleAnnotation(with: self.detectedObjectName)
-                    annotationNode.simdTransform = result.worldTransform
-                    annotationNode.scale = SCNVector3(self.annotationScale, self.annotationScale, self.annotationScale)
-                    
-                    // Store world position for later reference
-                    let worldPos = SIMD3<Float>(result.worldTransform.columns.3.x,
-                                               result.worldTransform.columns.3.y,
-                                               result.worldTransform.columns.3.z)
-                    self.annotationNodes.append((annotationNode, self.detectedObjectName, worldPos))
-                    sceneView.scene.rootNode.addChildNode(annotationNode)
-                    
-                    // Reset state after a short delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        self.isAddingAnnotation = false
-                    }
+                // Double-check object name is still valid
+                guard !self.detectedObjectName.isEmpty else {
+                    self.isAddingAnnotation = false
+                    return
+                }
+                
+                // Create annotation and add to scene
+                let annotationNode = self.createCapsuleAnnotation(with: self.detectedObjectName)
+                annotationNode.simdTransform = result.worldTransform
+                annotationNode.scale = SCNVector3(self.annotationScale, self.annotationScale, self.annotationScale)
+                
+                // Store world position for later reference
+                let worldPos = SIMD3<Float>(result.worldTransform.columns.3.x,
+                                           result.worldTransform.columns.3.y,
+                                           result.worldTransform.columns.3.z)
+                self.annotationNodes.append((annotationNode, self.detectedObjectName, worldPos))
+                sceneView.scene.rootNode.addChildNode(annotationNode)
+                
+                // Reset state after a short delay
+                Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    self?.isAddingAnnotation = false
                 }
             } else {
                 
                 // No plane found - show placement error
-                DispatchQueue.main.async {
-                    self.isAddingAnnotation = false
+                Task { [weak self] in
+                    self?.isAddingAnnotation = false
                     
-                    if !self.showPlacementError {
-                        self.showPlacementError = true
+                    if !(self?.showPlacementError ?? true) {
+                        self?.showPlacementError = true
                         
                         // Hide error after 4 seconds
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                            self.showPlacementError = false
+                        Task { [weak self] in
+                            try? await Task.sleep(nanoseconds: 4_000_000_000) // 4 seconds
+                            self?.showPlacementError = false
                         }
                     }
                 }
             }
         } else {
             // Couldn't create raycast query
-            DispatchQueue.main.async {
-                self.isAddingAnnotation = false
+            Task { [weak self] in
+                self?.isAddingAnnotation = false
             }
         }
     }
@@ -728,26 +747,14 @@ struct TranslationOverlay2D: Identifiable {
         return Date().timeIntervalSince(lastSeenTime) > staleThreshold
     }
 
-    /// Updates position with subtle smoothing for stable Google Translate-style tracking
+    /// Updates position directly without any smoothing or collision detection
+    /// Overlays MUST appear exactly over the detected text positions
     mutating func updatePosition(_ newPosition: CGPoint) {
         self.lastSeenTime = Date()
         
-        let distance = hypot(newPosition.x - screenPosition.x, newPosition.y - screenPosition.y)
-        
-        if distance < 3 {
-            return
-        }
-        
-        if updateCount < 2 || distance > 50 {
-            self.screenPosition = newPosition
-        } else {
-            let smoothingFactor: CGFloat = 0.3
-            self.screenPosition = CGPoint(
-                x: screenPosition.x + (newPosition.x - screenPosition.x) * smoothingFactor,
-                y: screenPosition.y + (newPosition.y - screenPosition.y) * smoothingFactor
-            )
-        }
-        
+        // Direct position update - no smoothing, no collision avoidance
+        // This ensures overlays stay exactly over the detected text
+        self.screenPosition = newPosition
         updateCount += 1
     }
 

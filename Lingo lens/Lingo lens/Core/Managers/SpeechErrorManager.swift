@@ -9,10 +9,8 @@ import SwiftUI
 
 /// Handles errors related to speech synthesis throughout the app
 /// Shows alert dialogs when pronunciation playback encounters problems
-class SpeechErrorManager: ObservableObject {
-    
-    // Singleton instance for app-wide access
-    static let shared = SpeechErrorManager()
+@MainActor
+class SpeechErrorManager: ObservableObject, ErrorManaging {
     
     // MARK: - Published Properties
 
@@ -30,11 +28,9 @@ class SpeechErrorManager: ObservableObject {
     ///   - message: The error message to show
     ///   - retryAction: Optional retry function if action can be attempted again
     func showError(message: String, retryAction: (() -> Void)? = nil) {
-        DispatchQueue.main.async { [weak self] in
-            self?.errorMessage = message
-            self?.retryAction = retryAction
-            self?.showErrorAlert = true
-        }
+        errorMessage = message
+        self.retryAction = retryAction
+        showErrorAlert = true
     }
 }
 
@@ -43,11 +39,11 @@ class SpeechErrorManager: ObservableObject {
 struct SpeechErrorAlert: ViewModifier {
     
     // Keep track of the error manager's state
-    @ObservedObject private var errorManager = SpeechErrorManager.shared
+    @ObservedObject var errorManager: ErrorManaging
     
     func body(content: Content) -> some View {
         content
-            .alert("Speech Error", isPresented: $errorManager.showErrorAlert) {
+            .alert("Speech Error", isPresented: .constant(errorManager.showErrorAlert)) {
                 
                 // Standard button to dismiss the alert
                 Button("OK", role: .cancel) { }
@@ -66,7 +62,7 @@ struct SpeechErrorAlert: ViewModifier {
 
 /// Helper extension to make speech error handling easy to add to any view
 extension View {
-    func withSpeechErrorHandling() -> some View {
-        self.modifier(SpeechErrorAlert())
+    func withSpeechErrorHandling(errorManager: ErrorManaging) -> some View {
+        self.modifier(SpeechErrorAlert(errorManager: errorManager))
     }
 }

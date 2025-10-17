@@ -13,7 +13,7 @@ import SwiftUI
 /// Acts as the central coordinator for all translation features
 /// @MainActor ensures all UI updates happen on the main thread (Swift 6 concurrency)
 @MainActor
-class TranslationService: ObservableObject {
+class TranslationService: ObservableObject, TranslationServicing {
     
     // Currently translated text from latest translation request
     @Published var translatedText = ""
@@ -114,5 +114,23 @@ class TranslationService: ObservableObject {
 
         // Update our published property with the result
         translatedText = response.targetText
+    }
+    
+    // MARK: - TranslationServicing Protocol
+    
+    /// Translates text from source to target language
+    /// - Parameters:
+    ///   - text: Text to translate
+    ///   - source: Source language
+    ///   - target: Target language
+    /// - Returns: Translated text
+    func translate(text: String, from source: AvailableLanguage, to target: AvailableLanguage) async throws -> String {
+        // Create a temporary translation session
+        let configuration = TranslationSession.Configuration(source: source.locale, target: target.locale)
+        let session = try await TranslationSession(configuration: configuration)
+        
+        // Perform the translation
+        let response = try await session.translate(text)
+        return response.targetText
     }
 }

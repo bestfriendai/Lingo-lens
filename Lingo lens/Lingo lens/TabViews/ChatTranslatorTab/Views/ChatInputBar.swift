@@ -320,9 +320,10 @@ struct AnimatedActionButton: View {
 // MARK: - Preview
 
 #Preview("Empty Input") {
-    ChatInputBar(
+    let diContainer = DIContainer.shared
+    return ChatInputBar(
         text: .constant(""),
-        speechRecognitionManager: SpeechRecognitionManager.shared,
+        speechRecognitionManager: diContainer.speechRecognitionManager,
         onSend: { print("Send") },
         onStartRecording: { print("Start recording") },
         onStopRecording: { print("Stop recording") }
@@ -330,9 +331,10 @@ struct AnimatedActionButton: View {
 }
 
 #Preview("With Text") {
-    ChatInputBar(
+    let diContainer = DIContainer.shared
+    return ChatInputBar(
         text: .constant("Hello world!"),
-        speechRecognitionManager: SpeechRecognitionManager.shared,
+        speechRecognitionManager: diContainer.speechRecognitionManager,
         onSend: { print("Send") },
         onStartRecording: { print("Start recording") },
         onStopRecording: { print("Stop recording") }

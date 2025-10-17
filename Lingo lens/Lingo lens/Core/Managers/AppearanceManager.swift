@@ -11,7 +11,7 @@ import SwiftUI
 /// and persists the user's choice between app launches
 /// @MainActor ensures all UI updates happen on the main thread (Swift 6 concurrency)
 @MainActor
-class AppearanceManager: ObservableObject {
+class AppearanceManager: ObservableObject, AppearanceManaging {
     
     // MARK: - Color Scheme Types
     
@@ -57,15 +57,27 @@ class AppearanceManager: ObservableObject {
     @Published var colorSchemeOption: ColorSchemeOption {
         didSet {
             print("🎨 Color scheme changed to: \(colorSchemeOption.title)")
-            DataManager.shared.saveColorSchemeOption(colorSchemeOption.rawValue)
+            dataPersistence.saveColorSchemeOption(colorSchemeOption.rawValue)
         }
     }
     
+    // MARK: - AppearanceManaging Protocol
+    
+    var colorSchemeOptionPublisher: AnyPublisher<ColorSchemeOption, Never> {
+        $colorSchemeOption.eraseToAnyPublisher()
+    }
+    
+    // MARK: - Private Properties
+    
+    private let dataPersistence: DataPersisting
+    
     // MARK: - Initialization
     
-    init() {
+    init(dataPersistence: DataPersisting) {
+        self.dataPersistence = dataPersistence
+        
         // Load the user's saved preference from previous sessions
-        let savedValue = DataManager.shared.getColorSchemeOption()
+        let savedValue = dataPersistence.getColorSchemeOption()
     
         // Use the saved value if valid, otherwise default to system setting
         if let option = ColorSchemeOption(rawValue: savedValue) {

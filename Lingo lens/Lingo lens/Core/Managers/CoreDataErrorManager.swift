@@ -10,10 +10,8 @@ import SwiftUI
 
 /// A centralized manager for handling CoreData errors throughout the app
 /// Captures and displays error alerts when data persistence operations fail
-class CoreDataErrorManager: ObservableObject {
-
-    // Singleton instance allows global access to error handling
-    static let shared = CoreDataErrorManager()
+@MainActor
+class CoreDataErrorManager: ObservableObject, ErrorManaging {
 
     // MARK: - Published Properties
 
@@ -32,8 +30,8 @@ class CoreDataErrorManager: ObservableObject {
     private var storeFailureObserver: NSObjectProtocol?
     private var saveErrorObserver: NSObjectProtocol?
 
-    /// Private initializer enforces singleton pattern and sets up notification observers
-    private init() {
+    /// Initialize CoreDataErrorManager and set up notification observers
+    init() {
         setupNotificationObservers()
     }
 
@@ -109,23 +107,21 @@ class CoreDataErrorManager: ObservableObject {
     ///   - message: The error message to display
     ///   - retryAction: Optional closure to execute if user chooses to retry
     func showError(message: String, retryAction: (() -> Void)? = nil) {
-        DispatchQueue.main.async { [weak self] in
-            self?.errorMessage = message
-            self?.retryAction = retryAction
-            self?.showErrorAlert = true
-        }
+        errorMessage = message
+        self.retryAction = retryAction
+        showErrorAlert = true
     }
 }
 
 /// SwiftUI view modifier that adds CoreData error alert functionality to any view
 struct CoreDataErrorAlert: ViewModifier {
     
-    // Observe the shared error manager to respond to its state changes
-    @ObservedObject private var errorManager = CoreDataErrorManager.shared
+    // Observe the error manager to respond to its state changes
+    @ObservedObject var errorManager: ErrorManaging
     
     func body(content: Content) -> some View {
         content
-            .alert("Storage Error", isPresented: $errorManager.showErrorAlert) {
+            .alert("Storage Error", isPresented: .constant(errorManager.showErrorAlert)) {
                 
                 // Basic OK button to dismiss the alert
                 Button("OK", role: .cancel) { }
@@ -145,7 +141,7 @@ struct CoreDataErrorAlert: ViewModifier {
 /// Extension on View to apply the CoreDataErrorAlert modifier
 /// Provides a simple way to add CoreData error handling to any view
 extension View {
-    func withCoreDataErrorHandling() -> some View {
-        self.modifier(CoreDataErrorAlert())
+    func withCoreDataErrorHandling(errorManager: ErrorManaging) -> some View {
+        self.modifier(CoreDataErrorAlert(errorManager: errorManager))
     }
 }

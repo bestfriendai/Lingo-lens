@@ -13,8 +13,20 @@ import SwiftUI
 @MainActor
 class SettingsViewModel: ObservableObject {
     
+    // MARK: - Dependencies
+    
+    private let dataPersistence: DataPersisting
+    private let appearanceManager: AppearanceManaging
+    
     // Tracks whether the settings panel is currently expanded
     @Published var isExpanded = false
+    
+    // MARK: - Initialization
+    
+    init(dataPersistence: DataPersisting? = nil, appearanceManager: AppearanceManaging? = nil) {
+        self.dataPersistence = dataPersistence ?? DataManager()
+        self.appearanceManager = appearanceManager ?? AppearanceManager(dataPersistence: self.dataPersistence)
+    }
     
     // MARK: - Panel Animation
 

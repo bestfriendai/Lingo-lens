@@ -17,7 +17,7 @@ struct AnnotationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var viewContext
      
-    @ObservedObject private var speechManager = SpeechManager.shared
+    @EnvironmentObject var speechManager: SpeechManaging
 
     // Text from the tapped AR annotation
     let originalText: String
@@ -287,7 +287,7 @@ struct AnnotationDetailView: View {
             }
         }
         .onDisappear {
-            SpeechManager.shared.stopSpeaking()
+            speechManager.stopSpeaking()
         }
         .onChange(of: isTranslating) { oldValue, newValue in
             if !newValue {
@@ -453,7 +453,7 @@ struct AnnotationDetailView: View {
     private func speakTranslation() {
         print("👆 Button pressed: Speak translation - Text: \"\(translatedText)\", Language: \(targetLanguage.shortName())")
 
-        SpeechManager.shared.speak(
+        speechManager.speak(
             text: translatedText,
             languageCode: targetLanguage.shortName()
         )

@@ -58,9 +58,9 @@ class ChatTranslatorViewModel: ObservableObject {
 
     // MARK: - Dependencies
 
-    private let translationService: TranslationService
-    private let speechManager = SpeechManager.shared
-    private let speechRecognitionManager = SpeechRecognitionManager.shared
+    private let translationService: TranslationServicing
+    private let speechManager: SpeechManaging
+    private let speechRecognitionManager: SpeechRecognizing
 
     // Translation cache for instant repeated translations (with size limit)
     private var translationCache: [String: String] = [:]
@@ -80,8 +80,14 @@ class ChatTranslatorViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    init(translationService: TranslationService) {
+    init(
+        translationService: TranslationServicing,
+        speechManager: SpeechManaging,
+        speechRecognitionManager: SpeechRecognizing
+    ) {
         self.translationService = translationService
+        self.speechManager = speechManager
+        self.speechRecognitionManager = speechRecognitionManager
 
         // Initialize with default languages (English source)
         let englishLanguage = AvailableLanguage(locale: Locale.Language(languageCode: "en", region: "US"))
