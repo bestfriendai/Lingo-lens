@@ -1,1 +1,0 @@
-/Users/iamabillionaire/Downloads/Lingo-lens-main/test_build.sh: line 9: timeout: command not found

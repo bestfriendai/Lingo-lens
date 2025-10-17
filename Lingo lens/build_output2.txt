@@ -1,4 +1,0 @@
-Command line invocation:
-    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme "Lingo lens" -destination "platform=iOS Simulator,name=iPhone 15" build
-
-** BUILD INTERRUPTED **
