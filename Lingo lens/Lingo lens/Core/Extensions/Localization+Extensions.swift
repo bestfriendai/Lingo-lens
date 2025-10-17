@@ -83,7 +83,7 @@ class AppLanguageManager: ObservableObject {
         if let savedLanguage = UserDefaults.standard.string(forKey: "AppLanguage") {
             currentLanguage = savedLanguage
         } else {
-            currentLanguage = Locale.current.languageCode ?? "en"
+            currentLanguage = Locale.current.language.languageCode?.identifier ?? "en"
         }
         setAppLanguage(currentLanguage)
     }

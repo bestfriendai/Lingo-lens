@@ -20,8 +20,8 @@ final class DIContainer: ObservableObject {
 
     // MARK: - Core Dependencies
 
-    private(set) var speechManager: SpeechManaging
-    private(set) var dataPersistence: DataPersisting
+    private(set) var speechManager: any SpeechManaging
+    private(set) var dataPersistence: any DataPersisting
     private(set) var translationService: TranslationServicing
     private(set) var appearanceManager: AppearanceManaging
     private(set) var persistenceController: PersistenceController
@@ -95,13 +95,13 @@ final class DIContainer: ObservableObject {
 
     /// Replaces the speech manager with a test implementation
     /// - Parameter manager: Mock speech manager for testing
-    func setSpeechManager(_ manager: SpeechManaging) {
+    func setSpeechManager(_ manager: any SpeechManaging) {
         self.speechManager = manager
     }
 
     /// Replaces the data persistence with a test implementation
     /// - Parameter persistence: Mock data persistence for testing
-    func setDataPersistence(_ persistence: DataPersisting) {
+    func setDataPersistence(_ persistence: any DataPersisting) {
         self.dataPersistence = persistence
     }
 

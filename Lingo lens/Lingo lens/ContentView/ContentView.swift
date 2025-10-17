@@ -45,47 +45,10 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            if let arViewModel = arViewModel {
-                ARTranslationView(arViewModel: arViewModel)
-                .tabItem {
-                    Label(localized: "tab.translate", systemImage: "camera.viewfinder")
-                }
-                .tag(Tab.arTranslationView)
-                .environmentObject(diContainer.speechManager)
-                .accessibilityLabel("AR Translation")
-                .accessibilityHint("Point camera at text to translate in real-time")
-            } else {
-                // Loading view while ARViewModel initializes
-                ProgressView(localized: "loading.loading")
-                    .tag(Tab.arTranslationView)
-                    .accessibilityLabel("Loading AR Translation")
-                    .accessibilityHint("Please wait while AR translation initializes")
-            }
-
-            ChatTranslatorView(translationService: translationService, diContainer: diContainer)
-                .tabItem {
-                    Label(localized: "tab.chat", systemImage: "bubble.left.and.bubble.right")
-                }
-                .tag(Tab.chatTranslatorView)
-                .accessibilityLabel("Chat Translator")
-                .accessibilityHint("Translate text conversations and speech")
-
-            SavedWords()
-                .tabItem {
-                    Label(localized: "tab.saved_words", systemImage: "bookmark.fill")
-                }
-                .tag(Tab.savedWordsView)
-                .environmentObject(diContainer.speechManager)
-                .accessibilityLabel("Saved Words")
-                .accessibilityHint("View and manage your saved translations")
-
-            SettingsTabView(arViewModel: arViewModel)
-                .tabItem {
-                    Label(localized: "tab.settings", systemImage: "gear")
-                }
-                .tag(Tab.settingsView)
-                .accessibilityLabel("Settings")
-                .accessibilityHint("Configure app preferences and languages")
+            arTranslationTabContent
+            chatTranslatorTabContent
+            savedWordsTabContent
+            settingsTabContent
         }
         .animation(.easeInOut(duration: 0.15), value: selectedTab)
         .withCoreDataErrorHandling()
@@ -165,6 +128,88 @@ struct ContentView: View {
                     diContainer.speechManager.prepareAudioSession()
                 }
             }
+        }
+    }
+    
+    // MARK: - Tab Content Computed Properties
+    
+    private var arTranslationTabContent: some View {
+        if let arViewModel = arViewModel {
+            ARTranslationView(arViewModel: arViewModel)
+                .tabItem {
+                    Label {
+                    Text(localized: "tab.translate")
+                } icon: {
+                    Image(systemName: "camera.viewfinder")
+                }
+                }
+                .tag(Tab.arTranslationView)
+                .environmentObject(diContainer.speechManager)
+                .accessibilityLabel("AR Translation")
+                .accessibilityHint("Point camera at text to translate in real-time")
+        } else {
+            ProgressView(Text(localized: "loading.loading"))
+                .tag(Tab.arTranslationView)
+                .accessibilityLabel("Loading AR Translation")
+                .accessibilityHint("Please wait while AR translation initializes")
+        }
+    }
+    
+    private var chatTranslatorTabContent: some View {
+        ChatTranslatorView(translationService: translationService, diContainer: diContainer)
+            .tabItem {
+                Label {
+                    Text(localized: "tab.chat")
+                } icon: {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                }
+            }
+            .tag(Tab.chatTranslatorView)
+            .accessibilityLabel("Chat Translator")
+            .accessibilityHint("Translate text conversations and speech")
+    }
+    
+    private var savedWordsTabContent: some View {
+        SavedWords()
+            .tabItem {
+                Label {
+                    Text(localized: "tab.saved_words")
+                } icon: {
+                    Image(systemName: "bookmark.fill")
+                }
+            }
+            .tag(Tab.savedWordsView)
+            .environmentObject(diContainer.speechManager)
+            .accessibilityLabel("Saved Words")
+            .accessibilityHint("View and manage your saved translations")
+    }
+    
+    private var settingsTabContent: some View {
+        if let arViewModel = arViewModel {
+            SettingsTabView(arViewModel: arViewModel)
+                .tabItem {
+                    Label {
+                        Text(localized: "tab.settings")
+                    } icon: {
+                        Image(systemName: "gearshape.fill")
+                    }
+                }
+                .tag(Tab.settingsView)
+                .accessibilityLabel("Settings")
+                .accessibilityHint("Configure app settings and preferences")
+        } else {
+            // Empty view while ARViewModel initializes
+            EmptyView()
+                .tabItem {
+                    Label {
+                        Text(localized: "tab.settings")
+                    } icon: {
+                        Image(systemName: "gearshape.fill")
+                    }
+                }
+                .tag(Tab.settingsView)
+                .accessibilityLabel("Settings")
+                .accessibilityHint("Configure app settings and preferences")
         }
     }
 }

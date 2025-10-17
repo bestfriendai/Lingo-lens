@@ -10,6 +10,8 @@ import CoreGraphics
 
 /// Protocol defining data persistence capabilities
 /// Enables dependency injection and testing with mock implementations
+/// @MainActor ensures data operations happen on main thread (Swift 6 concurrency)
+@MainActor
 protocol DataPersisting: AnyObject, ObservableObject {
     
     // MARK: - App Launch Tracking

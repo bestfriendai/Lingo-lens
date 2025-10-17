@@ -79,11 +79,11 @@ class AppearanceManager: ObservableObject, AppearanceManaging {
     
     // MARK: - Private Properties
     
-    private let dataPersistence: DataPersisting
+    private let dataPersistence: any DataPersisting
     
     // MARK: - Initialization
     
-    init(dataPersistence: DataPersisting) {
+    init(dataPersistence: any DataPersisting) {
         self.dataPersistence = dataPersistence
         
         // Load the user's saved preference from previous sessions

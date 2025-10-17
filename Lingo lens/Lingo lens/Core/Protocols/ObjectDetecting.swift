@@ -11,6 +11,8 @@ import ImageIO
 
 /// Protocol defining object detection capabilities
 /// Enables dependency injection and testing with mock implementations
+/// @MainActor ensures detection results are delivered on main thread (Swift 6 concurrency)
+@MainActor
 protocol ObjectDetecting {
     
     /// Detects objects in a specified region of a camera frame

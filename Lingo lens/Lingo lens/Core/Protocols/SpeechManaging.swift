@@ -75,6 +75,9 @@ protocol SpeechRecognizing: AnyObject {
 typealias SpeechRecognitionAuthorizationStatus = SFSpeechRecognizerAuthorizationStatus
 
 /// Protocol for managing error display and handling
+/// Protocol for error management
+/// @MainActor ensures error UI updates happen on main thread (Swift 6 concurrency)
+@MainActor
 protocol ErrorManaging: AnyObject, ObservableObject {
     /// Shows an error alert with an optional retry action
     /// - Parameters:
@@ -93,6 +96,9 @@ protocol ErrorManaging: AnyObject, ObservableObject {
 }
 
 /// Protocol for managing appearance settings
+/// Protocol for appearance management
+/// @MainActor ensures UI updates happen on main thread (Swift 6 concurrency)
+@MainActor
 protocol AppearanceManaging: AnyObject {
     /// Current color scheme option
     var colorSchemeOption: AppearanceManager.ColorSchemeOption { get set }
@@ -102,6 +108,8 @@ protocol AppearanceManaging: AnyObject {
 }
 
 /// Protocol for translation service
+/// @MainActor ensures translation operations happen on main thread (Swift 6 concurrency)
+@MainActor
 protocol TranslationServicing: AnyObject {
     /// Available languages for translation
     var availableLanguages: [AvailableLanguage] { get }
