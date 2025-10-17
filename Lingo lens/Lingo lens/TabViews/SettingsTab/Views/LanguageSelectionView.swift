@@ -184,6 +184,7 @@ struct LanguageSelectionView: View {
     createLanguageSelectionPreview()
 }
 
+@MainActor
 private func createLanguageSelectionPreview() -> some View {
     let sampleLanguage = AvailableLanguage(locale: Locale.Language(languageCode: "es", region: "ES"))
     

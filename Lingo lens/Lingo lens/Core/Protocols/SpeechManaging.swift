@@ -44,7 +44,7 @@ protocol SpeechManaging: AnyObject, ObservableObject {
 }
 
 /// Protocol defining speech recognition capabilities
-protocol SpeechRecognizing: AnyObject {
+protocol SpeechRecognizing: AnyObject, ObservableObject {
     
     /// Current authorization status for speech recognition
     var authorizationStatus: SpeechRecognitionAuthorizationStatus { get }
@@ -120,5 +120,6 @@ protocol TranslationServicing: AnyObject {
     ///   - source: Source language
     ///   - target: Target language
     /// - Returns: Translated text
+    @available(iOS 26.0, *)
     func translate(text: String, from source: AvailableLanguage, to target: AvailableLanguage) async throws -> String
 }

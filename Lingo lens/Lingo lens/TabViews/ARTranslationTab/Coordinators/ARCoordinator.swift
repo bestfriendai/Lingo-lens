@@ -13,6 +13,7 @@ import SwiftUI
 /// Connects AR session events to the ARViewModel
 /// Handles camera frames, detects objects, and manages user interactions with AR annotations
 @MainActor
+@preconcurrency
 class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
 
     // Reference to view model that holds AR state
@@ -99,7 +100,7 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     
     /// Processes each camera frame when object detection is active
     /// Takes the camera image, crops it to the user-defined bounding box, then runs object detection
-    func session(_ session: ARSession, didUpdate frame: ARFrame) {
+    nonisolated func session(_ session: ARSession, didUpdate frame: ARFrame) {
 
         // Extract data from frame BEFORE async to avoid retaining frame
         let currentTime = frame.timestamp
@@ -270,7 +271,7 @@ class ARCoordinator: NSObject, ARSCNViewDelegate, ARSessionDelegate {
     }
 
     /// Handles AR session errors by showing a user-friendly error message
-    func session(_ session: ARSession, didFailWithError error: Error) {
+    nonisolated func session(_ session: ARSession, didFailWithError error: Error) {
         print("❌ AR session error: \(error.localizedDescription)")
 
         Task { @MainActor [weak self] in

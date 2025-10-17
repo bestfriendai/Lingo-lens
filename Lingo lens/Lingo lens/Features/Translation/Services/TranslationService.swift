@@ -124,6 +124,7 @@ class TranslationService: ObservableObject, TranslationServicing {
     ///   - source: Source language
     ///   - target: Target language
     /// - Returns: Translated text
+    @available(iOS 26.0, *)
     func translate(text: String, from source: AvailableLanguage, to target: AvailableLanguage) async throws -> String {
         // Create a temporary translation session
         let session = try await TranslationSession(installedSource: source.locale, target: target.locale)

@@ -19,7 +19,7 @@ struct ChatTranslatorView: View {
     @State private var isSelectingSourceLanguage = true
     @State private var scrollToBottom = false
     
-    private var speechRecognitionManager: SpeechRecognizing {
+    private var speechRecognitionManager: SpeechRecognitionManager {
         diContainer.speechRecognitionManager
     }
 
@@ -54,13 +54,17 @@ struct ChatTranslatorView: View {
                     }
                 )
             }
-            .navigationTitle(localized: "chat.title")
+            .navigationTitle(Text(localized: "chat.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: { viewModel.clearMessages() }) {
-                            Label(localized: "chat.clear_all", systemImage: "trash")
+                            Label {
+                                Text(localized: "chat.clear_all")
+                            } icon: {
+                                Image(systemName: "trash")
+                            }
                         }
                         .accessibilityLabel("Clear all messages")
                         .accessibilityHint("Delete all conversation history")
@@ -489,6 +493,7 @@ struct FeatureTip: View {
     createChatTranslatorPreview()
 }
 
+@MainActor
 private func createChatTranslatorPreview() -> some View {
     let translationService = TranslationService()
     translationService.availableLanguages = [
@@ -501,5 +506,5 @@ private func createChatTranslatorPreview() -> some View {
     return ChatTranslatorView(translationService: translationService, diContainer: diContainer)
         .environmentObject(translationService)
         .environmentObject(diContainer)
-        .environmentObject(diContainer.appearanceManager)
+        .environmentObject(diContainer.appearanceManager as! AppearanceManager)
 }

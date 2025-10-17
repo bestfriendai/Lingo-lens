@@ -178,7 +178,7 @@ struct SavedTranslationDetailView: View {
         }
         
         // Apply speech error handling to show alerts if pronunciation fails
-        .withSpeechErrorHandling()
+        .withSpeechErrorHandling(errorManager: SpeechErrorManager())
         
         // Delete confirmation alert
         .alert("Delete Translation", isPresented: $showDeleteConfirmation) {
@@ -261,6 +261,7 @@ struct SavedTranslationDetailView: View {
     createSavedTranslationDetailPreview()
 }
 
+@MainActor
 private func createSavedTranslationDetailPreview() -> some View {
     let viewContext = PersistenceController.preview.container.viewContext
     let translation = SavedTranslation(context: viewContext)

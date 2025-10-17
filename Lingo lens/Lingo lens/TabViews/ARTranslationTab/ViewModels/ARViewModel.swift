@@ -131,8 +131,8 @@ class ARViewModel: ObservableObject {
     // MARK: - Properties
     
     // Dependencies
-    private let dataPersistence: DataPersisting
-    private let translationService: TranslationServicing
+    private let dataPersistence: any DataPersisting
+    private let translationService: any TranslationServicing
     
     // Reference to AR scene view (set by ARViewContainer)
     weak var sceneView: ARSCNView?
@@ -149,7 +149,7 @@ class ARViewModel: ObservableObject {
     // MARK: - Initialization
     
     // Default to Spanish as initial language
-    init(dataPersistence: DataPersisting, translationService: TranslationServicing) {
+    init(dataPersistence: any DataPersisting, translationService: any TranslationServicing) {
         self.dataPersistence = dataPersistence
         self.translationService = translationService
         

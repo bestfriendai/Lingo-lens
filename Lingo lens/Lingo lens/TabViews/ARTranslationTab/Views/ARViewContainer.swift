@@ -66,6 +66,11 @@ struct ARViewContainer: UIViewRepresentable {
     
     /// Creates a coordinator to handle ARKit delegates and gestures
     func makeCoordinator() -> ARCoordinator {
-        ARCoordinator(arViewModel: arViewModel)
+        ARCoordinator(
+            arViewModel: arViewModel,
+            objectDetectionManager: ObjectDetectionManager(errorManager: ARErrorManager()),
+            textRecognitionManager: TextRecognitionManager(),
+            errorManager: ARErrorManager()
+        )
     }
 }

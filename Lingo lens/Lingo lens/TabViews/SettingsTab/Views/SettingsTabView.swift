@@ -46,8 +46,8 @@ struct SettingsTabView: View {
                         }
                         .padding(.trailing, 5)
                     }
-                    .accessibilityLabel(localized: "settings.select_language")
-                    .accessibilityValue(localized: "settings.current_language", arguments: arViewModel.selectedLanguage.localizedName())
+                    .accessibilityLabel(Text(localized: "settings.select_language"))
+                    .accessibilityValue(Text(localized: "settings.current_language", arguments: arViewModel.selectedLanguage.localizedName()))
                     .accessibilityAddTraits(.isButton)
                 }
                 
@@ -118,7 +118,7 @@ struct SettingsTabView: View {
                 }
             }
             .listStyle(InsetGroupedListStyle())
-            .navigationTitle(localized: "settings.title")
+            .navigationTitle(Text(localized: "settings.title"))
             .navigationViewStyle(StackNavigationViewStyle())
         }
     }
@@ -141,17 +141,17 @@ struct SettingsTabView: View {
     createSettingsTabPreview()
 }
 
+@MainActor
 private func createSettingsTabPreview() -> some View {
     let arViewModel = ARViewModel(dataPersistence: DataManager(), translationService: TranslationService())
     arViewModel.selectedLanguage = AvailableLanguage(
-        locale: Locale.Language(languageCode: "es", region: "ES")
-    )
+        locale: Locale.Language(languageCode: "es", region: "ES"))
     
     let translationService = TranslationService()
     translationService.availableLanguages = [
-        AvailableLanguage(locale: Locale.Language(languageCode: "es", region: "ES")),
-        AvailableLanguage(locale: Locale.Language(languageCode: "fr", region: "FR")),
-        AvailableLanguage(locale: Locale.Language(languageCode: "de", region: "DE"))
+        AvailableLanguage(locale: .init(languageCode: "es", region: "ES")),
+        AvailableLanguage(locale: .init(languageCode: "fr", region: "FR")),
+        AvailableLanguage(locale: .init(languageCode: "de", region: "DE"))
     ]
     
     return SettingsTabView(arViewModel: arViewModel)

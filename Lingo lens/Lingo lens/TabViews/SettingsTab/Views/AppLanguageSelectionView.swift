@@ -51,12 +51,14 @@ struct AppLanguageSelectionView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle(localized: "language.select_language")
+            .navigationTitle(Text(localized: "language.select_language"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localized: "action.done") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Text(localized: "action.done")
                     }
                 }
             }

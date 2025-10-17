@@ -15,15 +15,15 @@ class SettingsViewModel: ObservableObject {
     
     // MARK: - Dependencies
     
-    private let dataPersistence: DataPersisting
-    private let appearanceManager: AppearanceManaging
+    private let dataPersistence: any DataPersisting
+    private let appearanceManager: any AppearanceManaging
     
     // Tracks whether the settings panel is currently expanded
     @Published var isExpanded = false
     
     // MARK: - Initialization
     
-    init(dataPersistence: DataPersisting? = nil, appearanceManager: AppearanceManaging? = nil) {
+    init(dataPersistence: (any DataPersisting)? = nil, appearanceManager: (any AppearanceManaging)? = nil) {
         self.dataPersistence = dataPersistence ?? DataManager()
         self.appearanceManager = appearanceManager ?? AppearanceManager(dataPersistence: self.dataPersistence)
     }
