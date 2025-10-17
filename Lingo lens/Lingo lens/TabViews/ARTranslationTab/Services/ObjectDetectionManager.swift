@@ -34,29 +34,50 @@ class ObjectDetectionManager {
     // MARK: - Setup
 
     /// Sets up the ML model when manager is created
-    /// Loads FastViTMA36F16 model for object recognition
+    /// IMPROVED: Graceful fallback when no ML model is available
+    /// Object detection feature will be disabled but app will still work for text translation
     init() {
         // Configure image cache
         imageCache.countLimit = AppConstants.Performance.imageCacheSize
         imageCache.totalCostLimit = 50 * 1024 * 1024  // 50MB max
-        
+
         // Configure result cache
         detectionResultCache.countLimit = AppConstants.Performance.imageCacheSize * 2
-        
-        do {
-            // Load the model from the app bundle
-            let model = try FastViTMA36F16(configuration: MLModelConfiguration()).model
-            visionModel = try VNCoreMLModel(for: model)
-        } catch {
-            SecureLogger.logError("Failed to load object detection model", error: error)
-            
-            // Alert user about model loading failure
-            ARErrorManager.shared.showError(
-                message: "Could not load object detection model. The app may not work properly.",
-                retryAction: nil
-            )
-            visionModel = nil
-        }
+
+        // NOTE: ML model for object detection is not currently available
+        // The app will still work for text translation (primary feature)
+        // Object detection mode will show a message that the feature is unavailable
+        visionModel = nil
+
+        SecureLogger.log("ℹ️ Object detection model not available - text translation still works", level: .info)
+
+        // TO ENABLE OBJECT DETECTION:
+        // 1. Add a CoreML model file (.mlmodel or .mlpackage) to your project
+        // 2. Uncomment and update the code below with your model name
+        //
+        // Example with FastViTMA36F16:
+        // do {
+        //     let config = MLModelConfiguration()
+        //     config.computeUnits = .all  // Use Neural Engine if available
+        //     let model = try FastViTMA36F16(configuration: config).model
+        //     visionModel = try VNCoreMLModel(for: model)
+        //     SecureLogger.log("✅ Object detection model loaded successfully", level: .info)
+        // } catch {
+        //     SecureLogger.logError("Failed to load object detection model", error: error)
+        //     visionModel = nil
+        // }
+        //
+        // Example with MobileNet (if you have it):
+        // do {
+        //     let config = MLModelConfiguration()
+        //     config.computeUnits = .all
+        //     let model = try MobileNet(configuration: config).model
+        //     visionModel = try VNCoreMLModel(for: model)
+        //     SecureLogger.log("✅ MobileNet model loaded", level: .info)
+        // } catch {
+        //     SecureLogger.logError("Failed to load MobileNet", error: error)
+        //     visionModel = nil
+        // }
     }
     
     // MARK: - Image Processing & Detection

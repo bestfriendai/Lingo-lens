@@ -12,6 +12,8 @@ import Translation
 
 /// Central view model that manages all AR translation features
 /// Controls object detection state, annotations, and camera session
+/// @MainActor ensures all UI updates happen on the main thread (Swift 6 concurrency)
+@MainActor
 class ARViewModel: ObservableObject {
     
     // Tracks whether the AR session is active or paused
@@ -40,23 +42,38 @@ class ARViewModel: ObservableObject {
     // Use 2D overlays (Google Translate-style, FAST) vs 3D AR anchors (persistent, SLOW)
     @Published var use2DOverlays = true
 
-    // Currently detected words from full frame scan
+    // Currently detected text phrases from full frame scan
     @Published var detectedWords: [DetectedWord] = []
 
-    // Automatically translated text for current detected word
+    // Automatically translated text for current detected phrase
     @Published var autoTranslatedText: String = ""
 
-    // Current word to translate (triggers translation via translationTask)
+    // Current phrase to translate (triggers translation via translationTask)
     @Published var wordToTranslate: String?
 
-    // Translation configuration for word translation mode
+    // Translation configuration for phrase translation mode
     @Published var wordTranslationConfiguration: TranslationSession.Configuration?
 
-    // Queue of words pending translation
+    // Queue of phrases pending translation
     @Published var pendingWordTranslations: [DetectedWord] = []
 
     // 2D Translation overlays (Google Translate-style)
     @Published var translationOverlays: [UUID: TranslationOverlay2D] = [:]
+
+    // Adaptive maximum overlays based on device and screen size
+    private var maxOverlays: Int {
+        // Google Translate-style: Show ALL detected text (no artificial limits)
+        // Use higher limits for natural behavior
+        let screenHeight = UIScreen.main.bounds.height
+
+        if screenHeight > 800 {
+            return 50  // Large screens can handle many overlays
+        } else if screenHeight > 700 {
+            return 35  // Medium screens
+        } else {
+            return 25  // Smaller screens
+        }
+    }
     
     // The yellow box that defines where to look for objects
     @Published var adjustableROI: CGRect = .zero
@@ -246,11 +263,9 @@ class ARViewModel: ObservableObject {
         if sessionState != .paused {
             sceneView.session.pause()
             sessionState = .paused
-            // Give iOS time to fully pause the session
-            Thread.sleep(forTimeInterval: 0.1)
         }
 
-        // Small delay before restarting for better stability
+        // Small delay before restarting for better stability (non-blocking)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self = self else { return }
             guard let sceneView = self.sceneView else { return }
@@ -384,10 +399,36 @@ class ARViewModel: ObservableObject {
         pendingWordTranslations.removeAll()
     }
 
-    /// Removes stale 2D overlays (older than 2 seconds)
+    /// Manages persistent overlays - removes stale and enforces limits
+    /// PERSISTENT MODE: Overlays removed when:
+    /// 1. Not seen for 3 seconds (stale)
+    /// 2. Maximum overlay count exceeded (remove oldest first)
+    /// 3. User explicitly clears translations
+    /// 4. User leaves AR Translation tab
     func cleanupStaleOverlays() {
-        translationOverlays = translationOverlays.filter { !$0.value.isStale }
+        var removedCount = 0
+        
+        let staleOverlays = translationOverlays.filter { $0.value.isStale }
+        for (key, _) in staleOverlays {
+            translationOverlays.removeValue(forKey: key)
+            removedCount += 1
+        }
+        
+        if removedCount > 0 {
+            print("🧹 Removed \(removedCount) stale overlays")
+        }
+
+        if translationOverlays.count > maxOverlays {
+            let sortedOverlays = translationOverlays.sorted { $0.value.lastSeenTime < $1.value.lastSeenTime }
+            let toRemove = sortedOverlays.prefix(translationOverlays.count - maxOverlays)
+            for (key, _) in toRemove {
+                translationOverlays.removeValue(forKey: key)
+            }
+            print("🧹 Removed \(toRemove.count) old overlays to maintain max of \(maxOverlays)")
+        }
     }
+
+
 
     /// Adds or updates a word translation node in AR space
     /// - Parameters:
@@ -570,69 +611,88 @@ class ARViewModel: ObservableObject {
     
     /// Handles text wrapping for annotation labels
     /// Splits text into lines and adds ellipsis for overflow
+    /// Uses actual visual width instead of character count for accurate wrapping
     private func processTextIntoLines(_ text: String, maxCharsPerLine: Int) -> [String] {
         var lines = [String]()
         var words = text.split(separator: " ").map(String.init)
         var currentLine = ""
-        
+
         let ellipsis = "..."
-        
+
+        // Define font and max width for visual measurements
+        let font = UIFont(name: "Helvetica-Bold", size: 32) ?? UIFont.systemFont(ofSize: 32, weight: .bold)
+        let maxVisualWidth: CGFloat = 320.0 // Approximate max width for capsule
+
+        // Helper function to measure visual width of text
+        func visualWidth(_ str: String) -> CGFloat {
+            let attributes: [NSAttributedString.Key: Any] = [.font: font]
+            let size = (str as NSString).size(withAttributes: attributes)
+            return size.width
+        }
+
         // Process words into lines with max 2 lines total
         while !words.isEmpty && lines.count < 2 {
             let word = words[0]
             let testLine = currentLine.isEmpty ? word : currentLine + " " + word
-            
-            if testLine.count <= maxCharsPerLine {
-                
+
+            if visualWidth(testLine) <= maxVisualWidth {
+
                 // Word fits on current line
                 currentLine = testLine
                 words.removeFirst()
             } else {
-                
+
                 // Word doesn't fit - handle overflow
                 if lines.count == 1 {
-                    
+
                     // On second line - add ellipsis and stop
                     if !currentLine.isEmpty {
                         currentLine = currentLine.trimmingCharacters(in: .whitespaces)
-                        if currentLine.count > maxCharsPerLine - ellipsis.count {
-                            currentLine = String(currentLine.prefix(maxCharsPerLine - ellipsis.count)) + ellipsis
-                        } else {
-                            currentLine += ellipsis
+
+                        // Truncate until it fits with ellipsis
+                        while visualWidth(currentLine + ellipsis) > maxVisualWidth && !currentLine.isEmpty {
+                            currentLine = String(currentLine.dropLast())
                         }
+                        currentLine += ellipsis
                     }
                     break
                 } else {
-                    
+
                     // On first line - start new line or truncate
                     if !currentLine.isEmpty {
                         lines.append(currentLine)
                         currentLine = ""
                     } else {
-                        currentLine = String(word.prefix(maxCharsPerLine))
+                        // Single word too long - truncate it
+                        var truncatedWord = word
+                        while visualWidth(truncatedWord) > maxVisualWidth && !truncatedWord.isEmpty {
+                            truncatedWord = String(truncatedWord.dropLast())
+                        }
+                        currentLine = truncatedWord
                         words.removeFirst()
                     }
                 }
             }
         }
-        
+
         // Add final line if not empty
         if !currentLine.isEmpty {
             lines.append(currentLine)
         }
-        
+
         // Add ellipsis to last line if we have more words
         if !words.isEmpty && lines.count <= 2 {
             let lastIndex = lines.count - 1
             var lastLine = lines[lastIndex]
-            if lastLine.count > maxCharsPerLine - ellipsis.count {
-                lastLine = String(lastLine.prefix(maxCharsPerLine - ellipsis.count)) + ellipsis
-            } else {
-                lastLine += ellipsis
+
+            // Truncate until it fits with ellipsis
+            while visualWidth(lastLine + ellipsis) > maxVisualWidth && !lastLine.isEmpty {
+                lastLine = String(lastLine.dropLast())
             }
+            lastLine += ellipsis
             lines[lastIndex] = lastLine
         }
-        
+
         // Reverse order because SpriteKit's coordinate system is different
         return lines.reversed()
     }
@@ -645,13 +705,52 @@ struct TranslationOverlay2D: Identifiable {
     let id: UUID
     let originalWord: String
     let translatedText: String
-    let screenPosition: CGPoint  // Position in screen coordinates
-    let boundingBox: CGRect  // Original Vision bounding box (normalized 0-1)
-    let timestamp: Date
+    var screenPosition: CGPoint
+    let boundingBox: CGRect
+    var lastSeenTime: Date
+    var updateCount: Int = 0
 
-    /// Returns true if this overlay is stale (older than 2 seconds)
-    var isStale: Bool {
-        Date().timeIntervalSince(timestamp) > 2.0
+    let isSingleWord: Bool
+    let wordCount: Int
+    let originalSize: CGSize
+    let calculatedFontSize: CGFloat
+    var worldPosition: SIMD3<Float>?
+
+    var fontSize: CGFloat {
+        return calculatedFontSize
     }
+
+    /// Returns true if this overlay is stale (not seen recently)
+    /// PERSISTENT MODE: Overlays stay visible much longer for stable translation experience
+    /// Overlays only disappear after extended time without re-detection (like Google Translate)
+    var isStale: Bool {
+        let staleThreshold: TimeInterval = 3.0
+        return Date().timeIntervalSince(lastSeenTime) > staleThreshold
+    }
+
+    /// Updates position with subtle smoothing for stable Google Translate-style tracking
+    mutating func updatePosition(_ newPosition: CGPoint) {
+        self.lastSeenTime = Date()
+        
+        let distance = hypot(newPosition.x - screenPosition.x, newPosition.y - screenPosition.y)
+        
+        if distance < 3 {
+            return
+        }
+        
+        if updateCount < 2 || distance > 50 {
+            self.screenPosition = newPosition
+        } else {
+            let smoothingFactor: CGFloat = 0.3
+            self.screenPosition = CGPoint(
+                x: screenPosition.x + (newPosition.x - screenPosition.x) * smoothingFactor,
+                y: screenPosition.y + (newPosition.y - screenPosition.y) * smoothingFactor
+            )
+        }
+        
+        updateCount += 1
+    }
+
+
 }
 

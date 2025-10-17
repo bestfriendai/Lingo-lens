@@ -11,6 +11,8 @@ import SwiftUI
 
 /// Manages language selection, availability, and translation requests
 /// Acts as the central coordinator for all translation features
+/// @MainActor ensures all UI updates happen on the main thread (Swift 6 concurrency)
+@MainActor
 class TranslationService: ObservableObject {
     
     // Currently translated text from latest translation request

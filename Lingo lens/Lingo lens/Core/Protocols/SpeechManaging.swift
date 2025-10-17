@@ -10,6 +10,8 @@ import Combine
 
 /// Protocol defining speech synthesis capabilities
 /// Enables dependency injection and testing with mock implementations
+/// @MainActor ensures speech operations happen on main thread (Swift 6 concurrency)
+@MainActor
 protocol SpeechManaging: AnyObject {
     
     /// Publisher for loading state

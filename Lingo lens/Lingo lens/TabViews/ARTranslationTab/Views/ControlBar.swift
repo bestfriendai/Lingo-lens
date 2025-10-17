@@ -90,7 +90,10 @@ struct ControlBar: View {
             // Stop detection when settings panel opens
             if settingsViewModel.isExpanded {
                 print("⚙️ Label Settings panel opened - stopping detection")
-                arViewModel.isDetectionActive = false
+                withAnimation {
+                    arViewModel.isDetectionActive = false
+                    arViewModel.isObjectDetectionMode = false
+                }
                 arViewModel.detectedObjectName = ""
             } else {
                 print("⚙️ Label Settings panel closed")
@@ -119,11 +122,14 @@ struct ControlBar: View {
             // Close settings panel if open
             if settingsViewModel.isExpanded {
                 print("⚙️ Closing label settings panel before translating item")
-                settingsViewModel.toggleExpanded()
+                withAnimation {
+                    settingsViewModel.toggleExpanded()
+                }
             }
 
-            // Enable object detection mode temporarily to show the box and detect object
-            arViewModel.isObjectDetectionMode = true
+            withAnimation(.easeInOut(duration: 0.3)) {
+                arViewModel.isObjectDetectionMode = true
+            }
             checkLanguageAndStartDetection()
         }) {
             if isCheckingLanguage {
@@ -343,7 +349,10 @@ struct ControlBar: View {
             )
         }
         print("🔍 Starting object detection with language: \(arViewModel.selectedLanguage.shortName())")
-        arViewModel.isDetectionActive = true
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            arViewModel.isDetectionActive = true
+        }
     }
 }
 

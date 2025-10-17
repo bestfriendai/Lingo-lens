@@ -36,12 +36,13 @@ class TextRecognitionManager {
 
     // MARK: - Text Recognition
 
-    /// Detects ALL text in camera frame and returns individual words with their positions
+    /// Detects ALL text in camera frame and returns complete phrases with their positions
     /// This version processes the entire frame for restaurant menu translation use case
+    /// Phrases are detected as complete text observations (e.g., "TAKE A RISK" instead of "TAKE", "A", "RISK")
     /// - Parameters:
     ///   - pixelBuffer: Raw camera frame from ARKit
     ///   - exifOrientation: Current orientation of device camera
-    ///   - completion: Callback with array of detected words or empty array if none found
+    ///   - completion: Callback with array of detected phrases or empty array if none found
     func recognizeAllText(pixelBuffer: CVPixelBuffer,
                          exifOrientation: CGImagePropertyOrientation,
                          completion: @escaping ([DetectedWord]) -> Void) {
@@ -83,66 +84,65 @@ class TextRecognitionManager {
                 }
 
                 var detectedWords: [DetectedWord] = []
+                var seenPhrases = Set<String>() // Track phrases to prevent duplicates
 
                 for observation in observations {
                     // Get top candidate text
                     guard let topCandidate = observation.topCandidates(1).first else { continue }
 
-                    // Split text into individual words
-                    let text = topCandidate.string
-                    let words = text.components(separatedBy: .whitespacesAndNewlines)
-                        .filter { !$0.isEmpty }
-
-                    // Calculate approximate bounding box per word
-                    let totalChars = text.count
+                    // Use entire observation as a phrase (don't split into individual words)
+                    let text = topCandidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
                     let boundingBox = observation.boundingBox
 
-                    var currentCharIndex = 0
-                    for word in words {
-                        // Filter out non-alphabetic words and very short words
-                        let cleanedWord = word.trimmingCharacters(in: .punctuationCharacters)
-                        if cleanedWord.count >= 2 && cleanedWord.rangeOfCharacter(from: .letters) != nil {
+                    // IMPROVED FILTER: Support BOTH individual words AND phrases
+                    // - Allow single characters if they're letters (e.g., "A", "I")
+                    // - Allow 2+ character words/phrases
+                    // - Must contain at least one letter
+                    // - Allow some non-letter characters (numbers, punctuation)
+                    let letterCount = text.filter { $0.isLetter || $0.isWhitespace }.count
+                    let hasLetters = text.rangeOfCharacter(from: .letters) != nil
+                    let isValid = text.count >= 1 &&  // Allow single characters
+                                 hasLetters &&  // Must have at least one letter
+                                 letterCount >= max(1, text.count - 3)  // Allow up to 3 non-letter/space chars
 
-                            // Estimate word's bounding box position within the line
-                            let wordCharCount = word.count
-                            let wordRatio = CGFloat(wordCharCount) / CGFloat(max(totalChars, 1))
-                            let charOffset = CGFloat(currentCharIndex) / CGFloat(max(totalChars, 1))
-
-                            // Create approximate bounding box for this word
-                            let wordBoundingBox = CGRect(
-                                x: boundingBox.origin.x + (boundingBox.width * charOffset),
-                                y: boundingBox.origin.y,
-                                width: boundingBox.width * wordRatio,
-                                height: boundingBox.height
-                            )
-
-                            let detectedWord = DetectedWord(
-                                text: cleanedWord,
-                                confidence: topCandidate.confidence,
-                                boundingBox: wordBoundingBox
-                            )
-                            detectedWords.append(detectedWord)
+                    if isValid {
+                        // Skip if we've already seen this phrase (deduplication)
+                        let lowercasedPhrase = text.lowercased()
+                        if seenPhrases.contains(lowercasedPhrase) {
+                            continue
                         }
-                        currentCharIndex += word.count + 1 // +1 for space
+                        seenPhrases.insert(lowercasedPhrase)
+
+                        let detectedWord = DetectedWord(
+                            text: text,
+                            confidence: topCandidate.confidence,
+                            boundingBox: boundingBox
+                        )
+                        detectedWords.append(detectedWord)
                     }
                 }
 
                 #if DEBUG
-                SecureLogger.log("Text recognition found \(detectedWords.count) words in full frame", level: .info)
+                SecureLogger.log("Text recognition found \(detectedWords.count) phrases in full frame", level: .info)
                 #endif
 
                 completion(detectedWords)
             }
 
-            // Configure recognition settings for ACCURACY with speed optimizations
-            // Use .accurate for reliable confidence scores (fast mode produces confidence < 0.3)
-            request.recognitionLevel = .accurate
+            // Google Translate mode: Optimize for SPEED while maintaining accuracy
+            request.recognitionLevel = .fast  // Fast mode for real-time performance
             request.usesLanguageCorrection = false  // Disable for speed
             request.recognitionLanguages = self.recognitionLanguages
 
-            // NO region of interest - process entire frame
-            // Filter out very small text to reduce noise
-            request.minimumTextHeight = 0.02 // 2% of image height - larger for faster processing
+            // Lower minimum text height to detect more text (like Google Translate)
+            request.minimumTextHeight = 0.015 // 1.5% of image height
+
+            // Use latest revision for best speed
+            if #available(iOS 16.0, *) {
+                request.revision = VNRecognizeTextRequestRevision3
+            }
+
+            // NO region of interest - process full frame for accurate positioning
 
             // Run the image through Vision framework
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
@@ -204,34 +204,40 @@ class TextRecognitionManager {
                     // Get top candidate text
                     guard let topCandidate = observation.topCandidates(1).first else { continue }
 
-                    // Split text into individual words
-                    let text = topCandidate.string
-                    let words = text.components(separatedBy: .whitespacesAndNewlines)
-                        .filter { !$0.isEmpty }
+                    // Use the ENTIRE detected text as a phrase (don't split into words)
+                    // This gives better context for translation
+                    let text = topCandidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
 
-                    for word in words {
-                        // Filter out non-alphabetic words and very short words
-                        let cleanedWord = word.trimmingCharacters(in: .punctuationCharacters)
-                        if cleanedWord.count >= 2 && cleanedWord.rangeOfCharacter(from: .letters) != nil {
-                            let detectedWord = DetectedWord(
-                                text: cleanedWord,
-                                confidence: topCandidate.confidence,
-                                boundingBox: observation.boundingBox
-                            )
-                            detectedWords.append(detectedWord)
-                        }
+                    // IMPROVED FILTER: Support BOTH individual words AND phrases
+                    // - Allow single characters if they're letters (e.g., "A", "I")
+                    // - Allow 1+ character words/phrases
+                    // - Must contain at least one letter
+                    // - Allow some non-letter characters (numbers, punctuation)
+                    let letterCount = text.filter { $0.isLetter || $0.isWhitespace }.count
+                    let hasLetters = text.rangeOfCharacter(from: .letters) != nil
+                    let isValid = text.count >= 1 &&  // Allow single characters
+                                 hasLetters &&  // Must have at least one letter
+                                 letterCount >= max(1, text.count - 3)  // Allow up to 3 non-letter/space chars
+
+                    if isValid {
+                        let detectedWord = DetectedWord(
+                            text: text,
+                            confidence: topCandidate.confidence,
+                            boundingBox: observation.boundingBox
+                        )
+                        detectedWords.append(detectedWord)
                     }
                 }
 
                 completion(detectedWords)
             }
 
-            // Configure recognition settings for better accuracy and performance
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
+            // Configure recognition settings for better accuracy in ROI
+            request.recognitionLevel = .accurate  // Use accurate mode for better quality
+            request.usesLanguageCorrection = true  // Enable for better accuracy
             request.recognitionLanguages = self.recognitionLanguages
             request.regionOfInterest = normalizedROI
-            request.minimumTextHeight = 0.03 // 3% of image height
+            request.minimumTextHeight = 0.02  // Lowered from 0.03 to detect smaller text (2% of image height)
 
             // Run the image through Vision framework
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
@@ -260,8 +266,52 @@ struct DetectedWord: Identifiable {
     var translation: String? = nil
 
     /// Returns true if confidence is above minimum threshold
-    /// Lower threshold (0.3) for fast recognition mode compatibility
+    /// Lower threshold for .fast mode (Google Translate-style)
     var isConfident: Bool {
-        return confidence > 0.3
+        return confidence > 0.2  // Lower threshold for fast mode
+    }
+
+    /// Determines if this is a single word vs multi-word phrase
+    var isSingleWord: Bool {
+        let words = text.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+        return words.count == 1
+    }
+
+    /// Returns the word count
+    var wordCount: Int {
+        return text.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .count
+    }
+
+    /// Type of detected text for smarter handling
+    enum TextType {
+        case shortWord      // 1 word, < 5 chars (e.g., "MON", "TUE", "GET")
+        case mediumWord     // 1 word, 5-10 chars (e.g., "MONDAY", "WORKING")
+        case longWord       // 1 word, > 10 chars (e.g., "PROCRASTINATION")
+        case shortPhrase    // 2-3 words (e.g., "GET IT DONE")
+        case longPhrase     // 4+ words (e.g., "NEVER NOT WORKING ON WEEKENDS")
+    }
+
+    /// Categorizes the detected text for optimal handling
+    var textType: TextType {
+        let words = text.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+
+        if words.count == 1 {
+            let length = text.count
+            if length < 5 {
+                return .shortWord
+            } else if length <= 10 {
+                return .mediumWord
+            } else {
+                return .longWord
+            }
+        } else if words.count <= 3 {
+            return .shortPhrase
+        } else {
+            return .longPhrase
+        }
     }
 }

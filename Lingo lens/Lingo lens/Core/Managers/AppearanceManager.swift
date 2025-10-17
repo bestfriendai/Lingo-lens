@@ -9,6 +9,8 @@ import SwiftUI
 
 /// Manages the app's theme settings (light mode, dark mode, or system preference)
 /// and persists the user's choice between app launches
+/// @MainActor ensures all UI updates happen on the main thread (Swift 6 concurrency)
+@MainActor
 class AppearanceManager: ObservableObject {
     
     // MARK: - Color Scheme Types

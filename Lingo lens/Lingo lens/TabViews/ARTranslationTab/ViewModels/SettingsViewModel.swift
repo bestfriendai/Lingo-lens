@@ -9,6 +9,8 @@ import SwiftUI
 
 /// Small view model to handle the expandable settings panel in the AR view
 /// Controls animation and expansion state of the settings drawer
+/// @MainActor ensures all UI updates happen on the main thread (Swift 6 concurrency)
+@MainActor
 class SettingsViewModel: ObservableObject {
     
     // Tracks whether the settings panel is currently expanded

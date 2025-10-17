@@ -8,37 +8,35 @@
 import SwiftUI
 
 /// Displays the currently detected object name or guidance text
-/// Shows red background when no object detected, green when object found
+/// Matches Google Translate's clean and professional design
 struct DetectionLabel: View {
     
-    // The name of the currently detected object (empty string if none)
     let detectedObjectName: String
     
     var body: some View {
-        
-        // Text to display - either the object name or a guidance message
-        let labelText = detectedObjectName.isEmpty ?
-            "Couldn't detect. Keep moving / Fit object in box / Move closer." :
-            detectedObjectName
-        
-        // Background color - red for no detection, green for successful detection
-        let labelBackground = detectedObjectName.isEmpty ?
-            Color.red.opacity(0.8) :
-            Color.green.opacity(0.8)
-        
-        // The actual label with dynamic text and background
-        Text(labelText)
-            .font(.title3)
-            .fontWeight(.medium)
-            .padding(8)
-            .background(labelBackground)
-            .foregroundColor(.white)
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .accessibilityLabel("Detection Status")
-            .accessibilityValue(detectedObjectName.isEmpty ?
-                "No object detected" :
-                "Detected object: \(detectedObjectName)")
+        HStack(spacing: 8) {
+            Image(systemName: detectedObjectName.isEmpty ? "viewfinder.circle" : "checkmark.circle.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(detectedObjectName.isEmpty ? .orange : .white)
+            
+            Text(detectedObjectName.isEmpty ? "Fit object in box" : detectedObjectName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(
+            Capsule()
+                .fill(detectedObjectName.isEmpty ? 
+                    Color.black.opacity(0.75) : 
+                    Color.green.opacity(0.85))
+                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 2)
+        )
+        .accessibilityLabel("Detection Status")
+        .accessibilityValue(detectedObjectName.isEmpty ?
+            "No object detected" :
+            "Detected object: \(detectedObjectName)")
     }
 }
 
@@ -51,5 +49,4 @@ struct DetectionLabel: View {
         DetectionLabel(detectedObjectName: "Large Professional Camera with Telephoto Lens")
     }
     .padding()
-    
 }

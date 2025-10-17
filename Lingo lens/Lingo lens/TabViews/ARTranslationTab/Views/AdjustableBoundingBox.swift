@@ -53,27 +53,51 @@ struct AdjustableBoundingBox: View {
     var body: some View {
         ZStack {
             
-            // Main detection box - yellow outline rectangle
-            Rectangle()
-                .stroke(Color.yellow, lineWidth: 4)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Detection box")
-                .accessibilityHint("Area where objects will be detected")
-                .background(Color.clear)
+            ZStack {
+                Rectangle()
+                    .fill(Color.white.opacity(0.1))
+                    .frame(width: roi.width, height: roi.height)
+                
+                Rectangle()
+                    .strokeBorder(Color.white, lineWidth: 3)
+                    .frame(width: roi.width, height: roi.height)
+                
+                VStack {
+                    HStack(spacing: 6) {
+                        Image(systemName: "viewfinder.circle")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Frame object here")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule()
+                            .fill(Color.black.opacity(0.75))
+                            .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+                    )
+                    .padding(.top, 12)
+                    
+                    Spacer()
+                }
                 .frame(width: roi.width, height: roi.height)
-                .position(
-                    x: roi.midX + boxDragOffset.width,
-                    y: roi.midY + boxDragOffset.height
-                )
-                .gesture(mainDragGesture)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Detection box")
+            .accessibilityHint("Area where objects will be detected")
+            .position(
+                x: roi.midX + boxDragOffset.width,
+                y: roi.midY + boxDragOffset.height
+            )
+            .gesture(mainDragGesture)
+            .animation(.easeOut(duration: 0.2), value: boxDragOffset)
             
-            // Corner resize handles at each corner
             handleView(for: .topLeft)
             handleView(for: .topRight)
             handleView(for: .bottomLeft)
             handleView(for: .bottomRight)
             
-            // Edge drag handles at the center of each edge
             edgeHandleView(for: .top)
             edgeHandleView(for: .bottom)
             edgeHandleView(for: .leading)
@@ -89,13 +113,20 @@ struct AdjustableBoundingBox: View {
     /// Creates a draggable icon on the edges for moving the box
     /// Uses the square.arrowtriangle.4.outward SF Symbol to indicate draggability
     private func edgeHandleView(for position: EdgePosition) -> some View {
-        Image(systemName: "square.arrowtriangle.4.outward")
-            .font(.system(size: 25))
-            .foregroundColor(Color.yellow)
-            .position(edgePosition(for: position))
-            .gesture(mainDragGesture)
-            .accessibilityLabel("\(position.rawValue) edge")
-            .accessibilityHint("Drag to move the detection box")
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.9))
+                .frame(width: 40, height: 40)
+                .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 2)
+            
+            Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.black.opacity(0.7))
+        }
+        .position(edgePosition(for: position))
+        .gesture(mainDragGesture)
+        .accessibilityLabel("\(position.rawValue) edge")
+        .accessibilityHint("Drag to move the detection box")
     }
     
     /// Calculates the position for edge handles based on the box position
@@ -211,25 +242,34 @@ struct AdjustableBoundingBox: View {
     /// Allows user to resize the box by dragging corners
     @ViewBuilder
     private func handleView(for position: HandlePosition) -> some View {
-        Circle()
-            .fill(Color.yellow)
-            .frame(width: 30, height: 30)
-            .position(
-                x: handlePosition(for: position).x + boxDragOffset.width,
-                y: handlePosition(for: position).y + boxDragOffset.height
-            )
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        
-                        // Store initial position on first drag event
-                        if initialHandleROI == nil {
-                            initialHandleROI = roi
-                        }
-                        let initial = initialHandleROI!
-                        
-                        // Start with initial ROI for each change
-                        var newROI = initial
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.95))
+                .frame(width: 36, height: 36)
+                .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 2)
+            
+            Circle()
+                .fill(Color.blue.opacity(0.9))
+                .frame(width: 26, height: 26)
+            
+            Image(systemName: resizeIconForHandle(position))
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.white)
+        }
+        .position(
+            x: handlePosition(for: position).x + boxDragOffset.width,
+            y: handlePosition(for: position).y + boxDragOffset.height
+        )
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    
+                    if initialHandleROI == nil {
+                        initialHandleROI = roi
+                    }
+                    let initial = initialHandleROI!
+                    
+                    var newROI = initial
                         
                         switch position {
                             
@@ -430,15 +470,12 @@ struct AdjustableBoundingBox: View {
     private func clampROI(_ rect: CGRect) -> CGRect {
         var newRect = rect
         
-        // Ensure minimum width and height
         newRect.size.width = max(newRect.size.width, minBoxSize)
         newRect.size.height = max(newRect.size.height, minBoxSize)
         
-        // Ensure box is within left and top margins
         newRect.origin.x = max(margin, newRect.origin.x)
         newRect.origin.y = max(margin, newRect.origin.y)
         
-        // Ensure box is within right and bottom margins
         if newRect.maxX > containerSize.width - margin {
             newRect.origin.x = containerSize.width - margin - newRect.size.width
         }
@@ -447,7 +484,6 @@ struct AdjustableBoundingBox: View {
             newRect.origin.y = containerSize.height - margin - newRect.size.height
         }
         
-        // Final check for edge cases (just to be safe)
         if newRect.origin.x < margin {
             newRect.origin.x = margin
         }
@@ -457,6 +493,15 @@ struct AdjustableBoundingBox: View {
         }
         
         return newRect
+    }
+    
+    private func resizeIconForHandle(_ position: HandlePosition) -> String {
+        switch position {
+        case .topLeft: return "arrow.up.left"
+        case .topRight: return "arrow.up.right"
+        case .bottomLeft: return "arrow.down.left"
+        case .bottomRight: return "arrow.down.right"
+        }
     }
 }
 

@@ -83,19 +83,26 @@ struct ARTranslationView: View {
                         // Loading state while AR session initializes
                         if arViewModel.isARSessionLoading {
                             Color.black
-                                .opacity(0.8)
+                                .opacity(0.9)
+                                .ignoresSafeArea()
                             
-                            VStack {
+                            VStack(spacing: 16) {
                                 ProgressView()
-                                    .scaleEffect(1.5)
+                                    .scaleEffect(1.3)
                                     .tint(.white)
                                 
                                 Text(arViewModel.loadingMessage)
                                     .foregroundColor(.white)
-                                    .font(.footnote)
-                                    .padding(.top, 10)
-                                    .opacity(0.8)
+                                    .font(.system(size: 15, weight: .medium))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 32)
                             }
+                            .padding(24)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.black.opacity(0.8))
+                                    .shadow(color: Color.black.opacity(0.3), radius: 16, x: 0, y: 4)
+                            )
                         }
                     }
                 }
@@ -106,9 +113,24 @@ struct ARTranslationView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 if !cameraPermissionManager.showPermissionAlert {
-                    
+
+                    // Clear translations button (leading side)
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(action: {
+                            SecureLogger.log("Clear translations button pressed", level: .info)
+                            arViewModel.clearWordTranslations()
+                        }) {
+                            Image(systemName: "trash.fill")
+                                .font(.system(size: 15))
+                                .foregroundColor(arViewModel.translationOverlays.isEmpty ? .gray : .red)
+                                .accessibilityLabel("Clear Translations")
+                                .accessibilityHint("Remove all translation overlays from screen")
+                        }
+                        .disabled(arViewModel.translationOverlays.isEmpty)
+                    }
+
                     ToolbarItem(placement: .topBarTrailing) {
-                        
+
                         // Info button to show instructions
                         Button(action: {
                             SecureLogger.log("Translation info button pressed", level: .info)
@@ -224,6 +246,10 @@ struct ARTranslationView: View {
             arViewModel.pauseARSession()
             arViewModel.resetAnnotations()
 
+            // PERSISTENT MODE: Clear all translation overlays when leaving AR tab
+            // This ensures overlays don't persist across different AR sessions
+            arViewModel.clearWordTranslations()
+
             // Show reset warning unless disabled
             if !neverShowAlertAboutReset {
                 showAlertAboutReset = true
@@ -255,77 +281,93 @@ struct ARTranslationView: View {
             // Detection box overlay (only shown during manual object detection mode)
             if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
                 boundingBoxView
+                    .transition(.scale.combined(with: .opacity))
             }
             
-            VStack {
-
-                // Top section - shows detection status for manual object detection mode
-                if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
-                    DetectionLabel(detectedObjectName: arViewModel.detectedObjectName)
-                        .padding(.top, 10)
-                }
-
-                // Word translation mode indicator
-                if arViewModel.isWordTranslationMode {
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 8, height: 8)
-                        Text("Translating words...")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
+            VStack(spacing: 0) {
+                VStack(spacing: 12) {
+                    if arViewModel.isDetectionActive && arViewModel.isObjectDetectionMode {
+                        DetectionLabel(detectedObjectName: arViewModel.detectedObjectName)
+                            .transition(.scale.combined(with: .opacity))
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.black.opacity(0.6))
-                    .cornerRadius(20)
-                    .padding(.top, 10)
-                }
 
-                // Error message when annotation placement fails
-                if arViewModel.showPlacementError {
-                    Text(arViewModel.placementErrorMessage)
-                        .font(.callout)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(10)
-                        .padding()
-                        .transition(.opacity)
+                    if arViewModel.isWordTranslationMode && !arViewModel.isObjectDetectionMode {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 6, height: 6)
+                            Text("Live Translation")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.black.opacity(0.6))
+                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        )
+                        .transition(.scale.combined(with: .opacity))
+                    }
+
+                    if arViewModel.showPlacementError {
+                        HStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.orange)
+                            
+                            Text(arViewModel.placementErrorMessage)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.black.opacity(0.85))
+                                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 2)
+                        )
+                        .padding(.horizontal, 16)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                         .zIndex(1)
                         .accessibilityAddTraits(.updatesFrequently)
+                    }
                 }
+                .padding(.top, 16)
+                .animation(.easeInOut(duration: 0.3), value: arViewModel.isDetectionActive)
+                .animation(.easeInOut(duration: 0.3), value: arViewModel.isWordTranslationMode)
+                .animation(.easeInOut(duration: 0.3), value: arViewModel.showPlacementError)
 
                 Spacer()
 
-                // Bottom control bar
                 ControlBar(
                     arViewModel: arViewModel,
                     settingsViewModel: settingsViewModel
                 )
+                .padding(.bottom, 16)
             }
             
             // Overlay when deleting an annotation
             if arViewModel.isDeletingAnnotation {
                 ZStack {
-                    Color.black.opacity(0.3)
+                    Color.black.opacity(0.4)
                         .ignoresSafeArea()
                     
-                    VStack {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                                .scaleEffect(1.2)
-                                .tint(.white)
-                            Text("Removing label...")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 16)
-                        .background(Color.black.opacity(0.7))
-                        .cornerRadius(12)
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(1.1)
+                            .tint(.white)
+                        Text("Removing label...")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.black.opacity(0.85))
+                            .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 4)
+                    )
                 }
                 .transition(.opacity)
                 .zIndex(100)
@@ -432,10 +474,38 @@ struct ARTranslationView: View {
                         for await pendingWords in arViewModel.$pendingWordTranslations.values {
                             guard !pendingWords.isEmpty else { continue }
 
-                            print("🔄 Translating \(pendingWords.count) words...")
+                            print("🔄 Translating \(pendingWords.count) phrases...")
 
                             // Translate each word
                             for word in pendingWords {
+                                                var shouldTranslate = true
+
+                                                await MainActor.run {
+                                                    guard let sceneView = arViewModel.sceneView else { return }
+
+                                                    let newPosition = convertVisionToScreen(
+                                                        boundingBox: word.boundingBox,
+                                                        sceneView: sceneView
+                                                    )
+
+                                                    let wordLowercased = word.text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+                                                    if let existingEntry = arViewModel.translationOverlays.first(where: { _, overlay in
+                                                        let existingText = overlay.originalWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                                                        return existingText == wordLowercased
+                                                    }) {
+                                                        var updatedOverlay = existingEntry.value
+                                                        updatedOverlay.updatePosition(newPosition)
+                                                        updatedOverlay.lastSeenTime = Date()
+                                                        arViewModel.translationOverlays[existingEntry.key] = updatedOverlay
+                                                        shouldTranslate = false
+                                                    }
+                                                }
+
+                                                if !shouldTranslate {
+                                                    continue
+                                                }
+
                                 do {
                                     let response = try await session.translate(word.text)
                                     let translation = response.targetText
@@ -444,23 +514,44 @@ struct ARTranslationView: View {
                                         guard let sceneView = arViewModel.sceneView else { return }
 
                                         if arViewModel.use2DOverlays {
-                                            // FAST MODE: 2D overlays (Google Translate-style)
+                                            // GOOGLE TRANSLATE MODE: Simple 2D overlays with direct position mapping
+                                            // No 3D anchoring needed - just map Vision coordinates to screen coordinates
                                             let screenPosition = convertVisionToScreen(
                                                 boundingBox: word.boundingBox,
                                                 sceneView: sceneView
                                             )
 
-                                            let overlay = TranslationOverlay2D(
+                                            // Calculate overlay size from original text bounding box
+                                            let overlaySize = calculateOverlaySize(
+                                                boundingBox: word.boundingBox,
+                                                sceneView: sceneView
+                                            )
+
+                                            // Calculate font size to match original text height
+                                            let fontSize = calculateFontSize(
+                                                for: overlaySize.height,
+                                                text: translation
+                                            )
+
+                                            // Create simple 2D overlay (no 3D world position needed)
+                                            var overlay = TranslationOverlay2D(
                                                 id: word.id,
                                                 originalWord: word.text,
                                                 translatedText: translation,
                                                 screenPosition: screenPosition,
                                                 boundingBox: word.boundingBox,
-                                                timestamp: Date()
+                                                lastSeenTime: Date(),
+                                                isSingleWord: word.isSingleWord,
+                                                wordCount: word.wordCount,
+                                                originalSize: overlaySize,
+                                                calculatedFontSize: fontSize,
+                                                worldPosition: nil  // Not needed for Google Translate-style
                                             )
 
+                                            overlay.updatePosition(screenPosition)
                                             arViewModel.translationOverlays[word.id] = overlay
-                                            print("✅ 2D Overlay: \(word.text) → \(translation)")
+                                            let typeLabel = word.isSingleWord ? "WORD" : "PHRASE(\(word.wordCount))"
+                                            print("✅ Overlay [\(typeLabel)]: \(word.text) → \(translation) | Size: \(overlaySize) | Font: \(fontSize)pt")
                                         } else {
                                             // SLOW MODE: 3D AR anchors (persistent)
                                             let screenWidth = sceneView.bounds.width
@@ -499,85 +590,211 @@ struct ARTranslationView: View {
     private var translationOverlaysView: some View {
         GeometryReader { geometry in
             ZStack {
-                // Render each translation overlay
                 ForEach(Array(arViewModel.translationOverlays.values), id: \.id) { overlay in
-                    // Skip stale overlays (older than 2 seconds)
-                    if !overlay.isStale {
+                    let halfWidth = overlay.originalSize.width / 2
+                    let halfHeight = overlay.originalSize.height / 2
+                    let margin: CGFloat = 10
+                    
+                    let isInBounds = overlay.screenPosition.x - halfWidth > -margin &&
+                                    overlay.screenPosition.x + halfWidth < geometry.size.width + margin &&
+                                    overlay.screenPosition.y - halfHeight > -margin &&
+                                    overlay.screenPosition.y + halfHeight < geometry.size.height + margin
+
+                    if !overlay.isStale && isInBounds {
                         Text(overlay.translatedText)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.85))
-                            .cornerRadius(6)
-                            .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                            .font(.system(size: overlay.fontSize, weight: .semibold, design: .rounded))
+                            .foregroundColor(.black)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.7)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .frame(width: max(overlay.originalSize.width, 40), 
+                                   height: max(overlay.originalSize.height, 20))
+                            .background(
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(Color.white.opacity(0.97))
+                                    .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 3)
+                                            .stroke(Color.black.opacity(0.08), lineWidth: 0.5)
+                                    )
+                            )
                             .position(overlay.screenPosition)
+                            .transition(.opacity)
+                            .animation(.interpolatingSpring(stiffness: 300, damping: 30), value: overlay.screenPosition)
+                            .id(overlay.id)
                     }
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .allowsHitTesting(false) // Allow touches to pass through to AR view
+        .allowsHitTesting(false)
     }
 
     /// Converts Vision framework normalized coordinates to screen coordinates
-    /// Vision uses bottom-left origin (0,0), UIKit uses top-left origin
+    /// Accounts for ARSCNView's camera feed scaling and orientation
     private func convertVisionToScreen(boundingBox: CGRect, sceneView: ARSCNView) -> CGPoint {
         let screenWidth = sceneView.bounds.width
         let screenHeight = sceneView.bounds.height
 
-        // Vision coordinates: (0,0) = bottom-left, (1,1) = top-right
-        // UIKit coordinates: (0,0) = top-left
-        let screenX = boundingBox.midX * screenWidth
-        let screenY = (1.0 - boundingBox.midY) * screenHeight
+        let orientation: UIInterfaceOrientation = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?
+            .interfaceOrientation ?? .portrait
 
-        return CGPoint(x: screenX, y: screenY)
+        let isLandscape = orientation == .landscapeLeft || orientation == .landscapeRight
+        let isPortraitUpsideDown = orientation == .portraitUpsideDown
+
+        if isLandscape {
+            if orientation == .landscapeRight {
+                let screenX = boundingBox.midY * screenWidth
+                let screenY = (1.0 - boundingBox.midX) * screenHeight
+                return CGPoint(x: screenX, y: screenY)
+            } else {
+                let screenX = (1.0 - boundingBox.midY) * screenWidth
+                let screenY = boundingBox.midX * screenHeight
+                return CGPoint(x: screenX, y: screenY)
+            }
+        } else {
+            if isPortraitUpsideDown {
+                let screenX = (1.0 - boundingBox.midX) * screenWidth
+                let screenY = boundingBox.midY * screenHeight
+                return CGPoint(x: screenX, y: screenY)
+            } else {
+                let screenX = boundingBox.midX * screenWidth
+                let screenY = (1.0 - boundingBox.midY) * screenHeight
+                return CGPoint(x: screenX, y: screenY)
+            }
+        }
+    }
+
+    /// Calculates overlay size from Vision bounding box to match original text size
+    /// This ensures translated text appears at the same size as the original detected text
+    private func calculateOverlaySize(boundingBox: CGRect, sceneView: ARSCNView) -> CGSize {
+        let screenWidth = sceneView.bounds.width
+        let screenHeight = sceneView.bounds.height
+
+        let orientation: UIInterfaceOrientation = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?
+            .interfaceOrientation ?? .portrait
+
+        let isLandscape = orientation == .landscapeLeft || orientation == .landscapeRight
+
+        let rawWidth: CGFloat
+        let rawHeight: CGFloat
+
+        if isLandscape {
+            rawWidth = boundingBox.height * screenWidth
+            rawHeight = boundingBox.width * screenHeight
+        } else {
+            rawWidth = boundingBox.width * screenWidth
+            rawHeight = boundingBox.height * screenHeight
+        }
+
+        let minWidth: CGFloat = 40
+        let minHeight: CGFloat = 20
+        let maxWidth = screenWidth * 0.8
+        let maxHeight = screenHeight * 0.15
+
+        let finalWidth = max(minWidth, min(rawWidth * 1.1, maxWidth))
+        let finalHeight = max(minHeight, min(rawHeight * 1.15, maxHeight))
+
+        return CGSize(width: finalWidth, height: finalHeight)
+    }
+
+    /// Calculates font size to match the original text height
+    /// Uses the original text height to determine appropriate font size for translated text
+    private func calculateFontSize(for originalHeight: CGFloat, text: String) -> CGFloat {
+        let baseFontSize = originalHeight * 0.65
+        
+        let screenHeight = UIScreen.main.bounds.height
+        let minFontSize: CGFloat = screenHeight > 700 ? 12 : 10
+        let maxFontSize: CGFloat = screenHeight > 800 ? 48 : 38
+        
+        var fontSize = max(minFontSize, min(baseFontSize, maxFontSize))
+        
+        if text.count > 15 {
+            fontSize *= 0.9
+        } else if text.count > 25 {
+            fontSize *= 0.8
+        }
+        
+        return fontSize
     }
 
     /// View that handles the draggable detection box
     private var boundingBoxView: some View {
         GeometryReader { geo in
-            Color.clear
-                .onAppear {
-                    
-                    // Initial setup of detection box in center of screen
-                    if arViewModel.adjustableROI == .zero {
-                        let boxSize: CGFloat = 200
-                        let margin: CGFloat = 16
-
-                        let maxBoxWidth = min(boxSize, geo.size.width - (2 * margin))
-                        let maxBoxHeight = min(boxSize, geo.size.height - (2 * margin))
+            ZStack {
+                Color.clear
+                    .onAppear {
                         
-                        arViewModel.adjustableROI = CGRect(
-                            x: (geo.size.width - maxBoxWidth) / 2,
-                            y: (geo.size.height - maxBoxHeight) / 2,
-                            width: maxBoxWidth,
-                            height: maxBoxHeight
-                        )
-                    }
-                    previousSize = geo.size
-                }
-                
-                // Handle container size changes (like rotation)
-                .onChange(of: geo.size) { oldSize, newSize in
-                    guard abs(oldSize.width - newSize.width) > 1 || abs(oldSize.height - newSize.height) > 1 else {
-                        return
-                    }
+                        if arViewModel.adjustableROI == .zero {
+                            let boxSize: CGFloat = 200
+                            let margin: CGFloat = 16
 
-                    // Resize and reposition the detection box
-                    let adjustedROI = arViewModel.adjustableROI.resizedAndClamped(from: oldSize, to: newSize)
-                    let constrainedROI = enforceMarginConstraints(adjustedROI, in: newSize)
-                    
-                    arViewModel.adjustableROI = constrainedROI
-                    
-                    previousSize = newSize
+                            let maxBoxWidth = min(boxSize, geo.size.width - (2 * margin))
+                            let maxBoxHeight = min(boxSize, geo.size.height - (2 * margin))
+                            
+                            arViewModel.adjustableROI = CGRect(
+                                x: (geo.size.width - maxBoxWidth) / 2,
+                                y: (geo.size.height - maxBoxHeight) / 2,
+                                width: maxBoxWidth,
+                                height: maxBoxHeight
+                            )
+                        }
+                        previousSize = geo.size
+                    }
+                    .onChange(of: geo.size) { oldSize, newSize in
+                        guard abs(oldSize.width - newSize.width) > 1 || abs(oldSize.height - newSize.height) > 1 else {
+                            return
+                        }
+
+                        let adjustedROI = arViewModel.adjustableROI.resizedAndClamped(from: oldSize, to: newSize)
+                        let constrainedROI = enforceMarginConstraints(adjustedROI, in: newSize)
+                        
+                        arViewModel.adjustableROI = constrainedROI
+                        
+                        previousSize = newSize
+                    }
+                
+                AdjustableBoundingBox(
+                    roi: $arViewModel.adjustableROI,
+                    containerSize: geo.size
+                )
+                
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                arViewModel.isDetectionActive = false
+                                arViewModel.isObjectDetectionMode = false
+                                arViewModel.detectedObjectName = ""
+                            }
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white)
+                                    .frame(width: 36, height: 36)
+                                
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.blue)
+                            }
+                            .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        }
+                        .padding(.top, 8)
+                        .padding(.trailing, 8)
+                        .accessibilityLabel("Close detection box")
+                        .accessibilityHint("Exits object detection mode")
+                    }
+                    Spacer()
                 }
-            
-            // The actual draggable/resizable box
-            AdjustableBoundingBox(
-                roi: $arViewModel.adjustableROI,
-                containerSize: geo.size
-            )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
     }
     
@@ -599,7 +816,8 @@ struct ARTranslationView: View {
             if newOrientation.isValidInterfaceOrientation && newOrientation != currentOrientation {
                 currentOrientation = newOrientation
 
-                if let sceneView = arViewModel?.sceneView {
+                Task { @MainActor in
+                    guard let arViewModel = arViewModel, let sceneView = arViewModel.sceneView else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         let oldContainerSize = previousSize
                         let newContainerSize = sceneView.bounds.size
@@ -613,7 +831,7 @@ struct ARTranslationView: View {
                         let margin: CGFloat = 16
 
                         // Preserve ROI aspect ratio and relative center within margins
-                        let currentROI = arViewModel?.adjustableROI ?? .zero
+                        let currentROI = arViewModel.adjustableROI
 
                         let maxWidth = newContainerSize.width - (2 * margin)
                         let maxHeight = newContainerSize.height - (2 * margin)
@@ -649,7 +867,7 @@ struct ARTranslationView: View {
                         // Ensure box stays within screen margins
                         newROI = enforceMarginConstraints(newROI, in: newContainerSize)
 
-                        arViewModel?.adjustableROI = newROI
+                        arViewModel.adjustableROI = newROI
                         previousSize = newContainerSize
                     }
                 }
@@ -715,9 +933,11 @@ struct ARTranslationView: View {
 
     /// Starts periodic cleanup of stale 2D overlays
     private func startCleanupTimer() {
-        // Clean up stale overlays every 1 second
+        // Persistent mode: Clean up less frequently since overlays last longer
         cleanupTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak arViewModel] _ in
-            arViewModel?.cleanupStaleOverlays()
+            Task { @MainActor in
+                arViewModel?.cleanupStaleOverlays()
+            }
         }
     }
 

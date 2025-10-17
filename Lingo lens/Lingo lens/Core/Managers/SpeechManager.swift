@@ -11,6 +11,8 @@ import Combine
 
 /// Singleton manager for handling all speech synthesis throughout the app
 /// Prevents lag by maintaining a single instance of AVSpeechSynthesizer
+/// @MainActor ensures all UI updates happen on the main thread (Swift 6 concurrency)
+@MainActor
 class SpeechManager: NSObject, ObservableObject, SpeechManaging {
     
     // Shared instance for whole app to use
@@ -145,9 +147,9 @@ class SpeechManager: NSObject, ObservableObject, SpeechManaging {
 // MARK: - AVSpeechSynthesizerDelegate
 
 extension SpeechManager: AVSpeechSynthesizerDelegate {
-    
+
     // Called when speech starts
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
         DispatchQueue.main.async {
             self.isLoading = false
             self.isSpeaking = true
@@ -155,14 +157,14 @@ extension SpeechManager: AVSpeechSynthesizerDelegate {
     }
 
     // Called when speech finishes normally
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         DispatchQueue.main.async {
             self.isSpeaking = false
         }
     }
     
     // Called when speech is cancelled
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         DispatchQueue.main.async {
             self.isLoading = false
             self.isSpeaking = false
@@ -170,14 +172,14 @@ extension SpeechManager: AVSpeechSynthesizerDelegate {
     }
     
     // Called when speech is paused
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didPause utterance: AVSpeechUtterance) {
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didPause utterance: AVSpeechUtterance) {
         DispatchQueue.main.async {
             self.isSpeaking = false
         }
     }
     
     // Called when paused speech continues
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didContinue utterance: AVSpeechUtterance) {
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didContinue utterance: AVSpeechUtterance) {
         DispatchQueue.main.async {
             self.isSpeaking = true
         }

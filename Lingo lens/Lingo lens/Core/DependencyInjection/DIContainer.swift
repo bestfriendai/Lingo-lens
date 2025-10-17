@@ -9,6 +9,8 @@ import Foundation
 
 /// Dependency Injection Container for managing app dependencies
 /// Provides centralized dependency management and enables testing with mock implementations
+/// @MainActor ensures all UI-related dependencies are created on the main thread (Swift 6 concurrency)
+@MainActor
 final class DIContainer: ObservableObject {
 
     // MARK: - Shared Instance
